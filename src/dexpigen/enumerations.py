@@ -21,3 +21,11 @@ class PipingClassArtefactClassification(StrEnum):
 
     NON_PIPING_CLASS_ARTEFACT = "NonPipingClassArtefact"
     PIPING_CLASS_ARTEFACT = "PipingClassArtefact"
+
+
+class FailActionClassification(StrEnum):
+    """DEXPI ``FailActionClassification``: actuator behaviour on power/air loss."""
+
+    FAIL_CLOSE = "FailClose"
+    FAIL_OPEN = "FailOpen"
+    FAIL_RETAIN_POSITION = "FailRetainPosition"
