@@ -1,11 +1,28 @@
-"""Tests for the piping module (systems, segments, connections)."""
+"""Tests for the piping module (systems, segments, connections, components)."""
 
 import pytest
 from pydantic import ValidationError
 
+import dexpigen.piping as piping
+from dexpigen.enumerations import OnHoldClassification
 from dexpigen.equipment import Nozzle
 from dexpigen.piping import (
+    BallValve,
+    ButterflyValve,
+    CheckValve,
+    Flange,
+    FlowInPipeOffPageConnector,
+    FlowOutPipeOffPageConnector,
+    GateValve,
+    GlobeValve,
+    LineBlind,
+    NeedleValve,
+    OperatedValve,
     Pipe,
+    PipeFitting,
+    PipeOffPageConnector,
+    PipeReducer,
+    PipingComponent,
     PipingConnection,
     PipingNetworkSegment,
     PipingNetworkSegmentItem,
@@ -14,11 +31,12 @@ from dexpigen.piping import (
     PipingNodeOwner,
     PipingSourceItem,
     PipingTargetItem,
+    SafetyValveOrFitting,
 )
 
 
 def test_connection_is_abstract():
-    with pytest.raises(TypeError):
+    with pytest.raises(ValidationError):
         PipingConnection(dex_id="C-1")
 
 
@@ -29,7 +47,7 @@ def test_roles_are_abstract():
         PipingTargetItem,
         PipingNetworkSegmentItem,
     ):
-        with pytest.raises(TypeError):
+        with pytest.raises(ValidationError):
             cls(dex_id="x")
 
 
@@ -112,3 +130,142 @@ def test_node_cannot_have_two_owners():
     nozzle_a.add_node(node)
     with pytest.raises(ValueError):
         nozzle_b.add_node(node)
+
+
+# --- Piping components, valves, fittings, and off-page connectors ---
+
+
+def test_piping_component_is_abstract():
+    with pytest.raises(ValidationError):
+        PipingComponent(dex_id="C-1")
+
+
+def test_pipe_fitting_is_abstract():
+    with pytest.raises(ValidationError):
+        PipeFitting(dex_id="F-1")
+
+
+def test_pipe_off_page_connector_is_abstract():
+    with pytest.raises(ValidationError):
+        PipeOffPageConnector(dex_id="OPC-1")
+
+
+def test_valve_family_roots_are_concrete():
+    for cls in (OperatedValve, CheckValve, SafetyValveOrFitting):
+        valve = cls(dex_id="V-1")
+        assert isinstance(valve, PipingComponent)
+
+
+def test_valve_leaves_inherit_operated_valve():
+    for cls in (BallValve, GlobeValve, ButterflyValve, NeedleValve, GateValve):
+        assert issubclass(cls, OperatedValve)
+        assert issubclass(cls, PipingComponent)
+
+
+def test_valve_extraction_names_map_to_concrete_classes():
+    for name in (
+        "BallValve",
+        "GlobeValve",
+        "ButterflyValve",
+        "NeedleValve",
+        "GateValve",
+        "CheckValve",
+    ):
+        assert hasattr(piping, name)
+
+
+def test_fittings_are_pipe_fitting_descendants():
+    for cls in (Flange, PipeReducer, LineBlind):
+        assert issubclass(cls, PipeFitting)
+        assert issubclass(cls, PipingComponent)
+
+
+def test_flow_in_connector_is_source_not_target():
+    assert issubclass(FlowInPipeOffPageConnector, PipingSourceItem)
+    assert not issubclass(FlowInPipeOffPageConnector, PipingTargetItem)
+
+
+def test_flow_out_connector_is_target_not_source():
+    assert issubclass(FlowOutPipeOffPageConnector, PipingTargetItem)
+    assert not issubclass(FlowOutPipeOffPageConnector, PipingSourceItem)
+
+
+def test_off_page_connector_is_segment_item():
+    assert issubclass(FlowInPipeOffPageConnector, PipingNetworkSegmentItem)
+    assert issubclass(FlowOutPipeOffPageConnector, PipingNetworkSegmentItem)
+
+
+def test_component_is_usable_as_source_and_target():
+    valve = OperatedValve(dex_id="V-1")
+    assert Pipe(dex_id="p-1", source_item=valve).source_item is valve
+    assert Pipe(dex_id="p-2", target_item=valve).target_item is valve
+
+
+def test_fitting_is_usable_as_source_and_target():
+    flange = Flange(dex_id="F-1")
+    assert Pipe(dex_id="p-1", source_item=flange).source_item is flange
+    assert Pipe(dex_id="p-2", target_item=flange).target_item is flange
+
+
+def test_flow_in_connector_usable_as_source():
+    opc = FlowInPipeOffPageConnector(dex_id="OPC-1")
+    assert Pipe(dex_id="p-1", source_item=opc).source_item is opc
+
+
+def test_flow_in_connector_rejected_as_target():
+    opc = FlowInPipeOffPageConnector(dex_id="OPC-1")
+    with pytest.raises(ValidationError):
+        Pipe(dex_id="p-1", target_item=opc)
+
+
+def test_flow_out_connector_rejected_as_source():
+    opc = FlowOutPipeOffPageConnector(dex_id="OPC-1")
+    with pytest.raises(ValidationError):
+        Pipe(dex_id="p-1", source_item=opc)
+
+
+def test_component_composes_in_segment_items():
+    segment = PipingNetworkSegment(dex_id="seg-1")
+    valve = OperatedValve(dex_id="V-1")
+    segment.add_item(valve)
+    assert valve in segment.items
+
+
+def test_component_cannot_have_two_segment_owners():
+    seg_a = PipingNetworkSegment(dex_id="seg-1")
+    seg_b = PipingNetworkSegment(dex_id="seg-2")
+    valve = OperatedValve(dex_id="V-1")
+    seg_a.add_item(valve)
+    with pytest.raises(ValueError):
+        seg_b.add_item(valve)
+
+
+def test_component_owns_nodes():
+    valve = OperatedValve(dex_id="V-1")
+    node = PipingNode(dex_id="node-1")
+    valve.add_node(node)
+    Pipe(dex_id="p-1", source_item=valve, source_node=node)
+
+
+def test_piping_component_fields_are_optional():
+    valve = OperatedValve(dex_id="V-1")
+    assert valve.fluid_code is None
+    assert valve.on_hold is None
+    assert valve.piping_class_artefact is None
+    assert valve.pressure_test_circuit_number is None
+
+
+def test_on_hold_enum_restricts_values():
+    valve = OperatedValve(dex_id="V-1", on_hold=OnHoldClassification.ON_HOLD)
+    assert valve.on_hold == OnHoldClassification.ON_HOLD
+    with pytest.raises(ValidationError):
+        valve.on_hold = "not-an-on-hold-value"
+
+
+def test_generic_valve_class_is_not_defined():
+    assert not hasattr(piping, "Valve")
+
+
+def test_flame_arrestor_and_rupture_disc_are_excluded():
+    assert not hasattr(piping, "FlameArrestor")
+    assert not hasattr(piping, "RuptureDisc")

@@ -42,5 +42,5 @@ class DexpiBaseModel(BaseModel):
     @classmethod
     def _reject_abstract_instantiation(cls, data: Any) -> Any:
         if cls._abstract:
-            raise TypeError(f"{cls.__name__} is abstract and cannot be instantiated")
+            raise ValueError(f"{cls.__name__} is abstract and cannot be instantiated")
         return data

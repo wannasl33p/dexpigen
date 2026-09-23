@@ -80,12 +80,12 @@ EXPECTED_TREE: dict[str, tuple[str, ...]] = {
 
 
 def test_equipment_is_abstract():
-    with pytest.raises(TypeError):
+    with pytest.raises(ValidationError):
         Equipment(dex_id="E-1")
 
 
 def test_chamber_is_abstract():
-    with pytest.raises(TypeError):
+    with pytest.raises(ValidationError):
         Chamber(dex_id="C-1")
 
 

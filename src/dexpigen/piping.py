@@ -15,6 +15,10 @@ from typing import ClassVar, Self
 from pydantic import Field, PrivateAttr, model_validator
 
 from dexpigen.base import DexpiBaseModel
+from dexpigen.enumerations import (
+    OnHoldClassification,
+    PipingClassArtefactClassification,
+)
 
 
 class PipingNode(DexpiBaseModel):
@@ -96,6 +100,74 @@ class PipingNetworkSegmentItem(DexpiBaseModel):
     _abstract: ClassVar[bool] = True
 
     _owner: PipingNetworkSegment | None = PrivateAttr(default=None)
+
+
+class PipingComponent(
+    PipingNetworkSegmentItem, PipingSourceItem, PipingTargetItem
+):
+    """Abstract base for an in-line piping component (valve or fitting).
+
+    A component sits in a segment's ``items``, owns ``PipingNode`` connection
+    points, and can serve as both a piping source and target item.
+    """
+
+    _abstract: ClassVar[bool] = True
+
+    fluid_code: str | None = None
+    on_hold: OnHoldClassification | None = None
+    piping_class_artefact: PipingClassArtefactClassification | None = None
+    pressure_test_circuit_number: str | None = None
+
+
+class OperatedValve(PipingComponent):
+    """Concrete family root and fallback for an unspecified operated valve."""
+
+
+class CheckValve(PipingComponent):
+    """Concrete family root and fallback for an unspecified check valve."""
+
+
+class SafetyValveOrFitting(PipingComponent):
+    """Concrete family root and fallback for an unspecified safety valve/fitting."""
+
+
+# Named operated-valve leaves, mapped 1:1 from the extraction vocabulary
+# (issue 07): ``ball``/``globe``/``butterfly``/``needle``/``gate``.
+
+class BallValve(OperatedValve): ...
+class GlobeValve(OperatedValve): ...
+class ButterflyValve(OperatedValve): ...
+class NeedleValve(OperatedValve): ...
+class GateValve(OperatedValve): ...
+
+
+class PipeFitting(PipingComponent):
+    """Abstract base for pipe fittings (flange, reducer, line blind)."""
+
+    _abstract: ClassVar[bool] = True
+
+
+class Flange(PipeFitting): ...
+class PipeReducer(PipeFitting): ...
+class LineBlind(PipeFitting): ...
+
+
+class PipeOffPageConnector(PipingNetworkSegmentItem, PipingNodeOwner):
+    """Abstract base for a pipe off-page connector.
+
+    A connector sits in a segment's ``items`` and owns ``PipingNode`` points;
+    the concrete flow-in/flow-out subtypes add the source/target role.
+    """
+
+    _abstract: ClassVar[bool] = True
+
+
+class FlowInPipeOffPageConnector(PipeOffPageConnector, PipingSourceItem):
+    """A pipe off-page connector that is a valid piping source."""
+
+
+class FlowOutPipeOffPageConnector(PipeOffPageConnector, PipingTargetItem):
+    """A pipe off-page connector that is a valid piping target."""
 
 
 class PipingNetworkSegment(DexpiBaseModel):
