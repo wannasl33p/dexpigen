@@ -9,16 +9,18 @@ from pydantic import Field
 from dexpigen.base import DexpiBaseModel
 from dexpigen.equipment import Equipment
 from dexpigen.instrumentation import (
-    ActuatingFunction,
     ActuatingSystem,
     ProcessInstrumentationFunction,
-    SignalConveyingFunction,
 )
 from dexpigen.piping import PipingNetworkSystem
 
 
 class ConceptualModel(DexpiBaseModel):
-    """The root that aggregates all top-level objects of a P&ID."""
+    """The root that aggregates all top-level objects of a P&ID.
+
+    ``SignalConveyingFunction`` and ``ActuatingFunction`` are not top-level:
+    they are composed under their owning ``ProcessInstrumentationFunction``.
+    """
 
     equipment: list[Equipment] = Field(default_factory=list)
     piping_network_systems: list[PipingNetworkSystem] = Field(default_factory=list)
@@ -26,10 +28,6 @@ class ConceptualModel(DexpiBaseModel):
         default_factory=list
     )
     actuating_systems: list[ActuatingSystem] = Field(default_factory=list)
-    actuating_functions: list[ActuatingFunction] = Field(default_factory=list)
-    signal_conveying_functions: list[SignalConveyingFunction] = Field(
-        default_factory=list
-    )
 
     def add_equipment(self, item: Equipment) -> Self:
         """Aggregate ``item`` at the top level of this model."""
@@ -52,16 +50,3 @@ class ConceptualModel(DexpiBaseModel):
         """Aggregate ``system`` at the top level of this model."""
         self.actuating_systems.append(system)
         return self
-
-    def add_actuating_function(self, function: ActuatingFunction) -> Self:
-        """Aggregate ``function`` at the top level of this model."""
-        self.actuating_functions.append(function)
-        return self
-
-    def add_signal_conveying_function(
-        self, function: SignalConveyingFunction
-    ) -> Self:
-        """Aggregate ``function`` at the top level of this model."""
-        self.signal_conveying_functions.append(function)
-        return self
-

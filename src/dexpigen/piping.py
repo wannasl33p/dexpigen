@@ -117,28 +117,46 @@ class PipingComponent(
     on_hold: OnHoldClassification | None = None
     piping_class_artefact: PipingClassArtefactClassification | None = None
     pressure_test_circuit_number: str | None = None
+    piping_component_name: str | None = None
+    piping_component_number: str | None = None
 
 
 class OperatedValve(PipingComponent):
     """Concrete family root and fallback for an unspecified operated valve."""
+    component_class: ClassVar[str] = "OperatedValve"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS11141590"
 
 
 class CheckValve(PipingComponent):
     """Concrete family root and fallback for an unspecified check valve."""
+    component_class: ClassVar[str] = "CheckValve"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS292229"
 
 
 class SafetyValveOrFitting(PipingComponent):
     """Concrete family root and fallback for an unspecified safety valve/fitting."""
+    component_class: ClassVar[str] = "SafetyValveOrFitting"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/SafetyValveOrFitting"
 
 
 # Named operated-valve leaves, mapped 1:1 from the extraction vocabulary
 # (issue 07): ``ball``/``globe``/``butterfly``/``needle``/``gate``.
 
-class BallValve(OperatedValve): ...
-class GlobeValve(OperatedValve): ...
-class ButterflyValve(OperatedValve): ...
-class NeedleValve(OperatedValve): ...
-class GateValve(OperatedValve): ...
+class BallValve(OperatedValve):
+    component_class: ClassVar[str] = "BallValve"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS416654"
+class GlobeValve(OperatedValve):
+    component_class: ClassVar[str] = "GlobeValve"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS416204"
+class ButterflyValve(OperatedValve):
+    component_class: ClassVar[str] = "ButterflyValve"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS416609"
+class NeedleValve(OperatedValve):
+    component_class: ClassVar[str] = "NeedleValve"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS421064"
+class GateValve(OperatedValve):
+    component_class: ClassVar[str] = "GateValve"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS416519"
 
 
 class PipeFitting(PipingComponent):
@@ -147,9 +165,15 @@ class PipeFitting(PipingComponent):
     _abstract: ClassVar[bool] = True
 
 
-class Flange(PipeFitting): ...
-class PipeReducer(PipeFitting): ...
-class LineBlind(PipeFitting): ...
+class Flange(PipeFitting):
+    component_class: ClassVar[str] = "Flange"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS13307654"
+class PipeReducer(PipeFitting):
+    component_class: ClassVar[str] = "PipeReducer"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS416294"
+class LineBlind(PipeFitting):
+    component_class: ClassVar[str] = "LineBlind"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS280034"
 
 
 class PipeOffPageConnector(PipingNetworkSegmentItem, PipingNodeOwner):
@@ -161,17 +185,70 @@ class PipeOffPageConnector(PipingNetworkSegmentItem, PipingNodeOwner):
 
     _abstract: ClassVar[bool] = True
 
+    connector_reference: PipeOffPageConnectorReference | None = None
+
+    @model_validator(mode="after")
+    def _bind_connector_reference(self) -> Self:
+        if self.connector_reference is not None:
+            self._adopt_connector_reference(self.connector_reference)
+        return self
+
+    def add_connector_reference(
+        self, reference: PipeOffPageConnectorReference
+    ) -> Self:
+        """Compose ``reference`` under this connector, enforcing single ownership."""
+        self._adopt_connector_reference(reference)
+        self.connector_reference = reference
+        return self
+
+    def _adopt_connector_reference(self, reference: PipeOffPageConnectorReference) -> None:
+        owner = reference._owner
+        if owner is not None and owner is not self:
+            raise ValueError("connector reference is already owned by another connector")
+        reference._owner = self
+
 
 class FlowInPipeOffPageConnector(PipeOffPageConnector, PipingSourceItem):
     """A pipe off-page connector that is a valid piping source."""
+    component_class: ClassVar[str] = "FlowInPipeOffPageConnector"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/FlowInPipeOffPageConnector"
 
 
 class FlowOutPipeOffPageConnector(PipeOffPageConnector, PipingTargetItem):
     """A pipe off-page connector that is a valid piping target."""
+    component_class: ClassVar[str] = "FlowOutPipeOffPageConnector"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/FlowOutPipeOffPageConnector"
+
+
+class PipeOffPageConnectorReference(DexpiBaseModel):
+    """Abstract base for a reference to a pipe off-page connector."""
+
+    _abstract: ClassVar[bool] = True
+
+    _owner: PipeOffPageConnector | None = PrivateAttr(default=None)
+
+
+class PipeOffPageConnectorObjectReference(PipeOffPageConnectorReference):
+    """A reference to a ``PipeOffPageConnector`` object."""
+    component_class: ClassVar[str] = "PipeOffPageConnectorObjectReference"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/PipeOffPageConnectorObjectReference"
+
+    referenced_connector: PipeOffPageConnector | None = None
+
+
+class PipeOffPageConnectorReferenceByNumber(PipeOffPageConnectorReference):
+    """A reference to a pipe off-page connector by drawing and connector number."""
+    component_class: ClassVar[str] = "PipeOffPageConnectorReferenceByNumber"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/PipeOffPageConnectorReferenceByNumber"
+
+    referenced_connector_number: str | None = None
+    referenced_drawing_number: str | None = None
 
 
 class PipingNetworkSegment(DexpiBaseModel):
     """A stretch of a ``PipingNetworkSystem``."""
+    component_class: ClassVar[str] = "PipingNetworkSegment"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS267704"
 
     segment_number: str | None = None
 
@@ -215,6 +292,8 @@ class PipingNetworkSegment(DexpiBaseModel):
 
 class PipingNetworkSystem(DexpiBaseModel):
     """The DEXPI line object, composed of ``PipingNetworkSegment`` objects."""
+    component_class: ClassVar[str] = "PipingNetworkSystem"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS270359"
 
     line_number: str | None = None
     fluid_code: str | None = None

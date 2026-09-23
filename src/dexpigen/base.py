@@ -30,6 +30,12 @@ class DexpiBaseModel(BaseModel):
 
     _abstract: ClassVar[bool] = False
 
+    # RDL discriminator, filled in by each concrete DEXPI class. Empty on the
+    # shared base and on the few concrete classes that map to elements without a
+    # ``ComponentClass`` (``Pipe`` -> ``<Connection>``, ``PipingNode`` -> ``<Node>``).
+    component_class: ClassVar[str] = ""
+    component_class_uri: ClassVar[str] = ""
+
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         # A class body that sets ``_abstract`` has already recorded it in

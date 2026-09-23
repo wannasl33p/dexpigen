@@ -233,3 +233,31 @@ def test_add_custom_attribute():
     attribute = CustomAttribute(name="Location", value="rack 1")
     assert pif.add_custom_attribute(attribute) is pif
     assert attribute in pif.custom_attributes
+
+
+def test_pif_composes_signal_and_actuating_functions():
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    signal = SignalConveyingFunction(dex_id="S-1")
+    function = ActuatingFunction(dex_id="AF-1")
+    pif.add_signal_conveying_function(signal)
+    pif.add_actuating_function(function)
+    assert signal in pif.signal_conveying_functions
+    assert function in pif.actuating_functions
+
+
+def test_signal_cannot_have_two_owners():
+    pif_a = ProcessInstrumentationFunction(dex_id="PIF-1")
+    pif_b = ProcessInstrumentationFunction(dex_id="PIF-2")
+    signal = SignalConveyingFunction(dex_id="S-1")
+    pif_a.add_signal_conveying_function(signal)
+    with pytest.raises(ValueError):
+        pif_b.add_signal_conveying_function(signal)
+
+
+def test_actuating_function_cannot_have_two_owners():
+    pif_a = ProcessInstrumentationFunction(dex_id="PIF-1")
+    pif_b = ProcessInstrumentationFunction(dex_id="PIF-2")
+    function = ActuatingFunction(dex_id="AF-1")
+    pif_a.add_actuating_function(function)
+    with pytest.raises(ValueError):
+        pif_b.add_actuating_function(function)

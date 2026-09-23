@@ -21,6 +21,8 @@ from dexpigen.piping import (
     Pipe,
     PipeFitting,
     PipeOffPageConnector,
+    PipeOffPageConnectorReference,
+    PipeOffPageConnectorReferenceByNumber,
     PipeReducer,
     PipingComponent,
     PipingConnection,
@@ -269,3 +271,38 @@ def test_generic_valve_class_is_not_defined():
 def test_flame_arrestor_and_rupture_disc_are_excluded():
     assert not hasattr(piping, "FlameArrestor")
     assert not hasattr(piping, "RuptureDisc")
+
+
+def test_piping_component_name_and_number_are_optional():
+    valve = OperatedValve(dex_id="V-1")
+    assert valve.piping_component_name is None
+    assert valve.piping_component_number is None
+    named = OperatedValve(
+        dex_id="V-2", piping_component_name="HV", piping_component_number="02"
+    )
+    assert named.piping_component_name == "HV"
+    assert named.piping_component_number == "02"
+
+
+def test_off_page_connector_composes_reference():
+    opc = FlowInPipeOffPageConnector(dex_id="OPC-1")
+    reference = PipeOffPageConnectorReferenceByNumber(
+        dex_id="REF-1", referenced_connector_number="123"
+    )
+    opc.add_connector_reference(reference)
+    assert opc.connector_reference is reference
+    assert reference.referenced_connector_number == "123"
+
+
+def test_connector_reference_cannot_have_two_owners():
+    opc_a = FlowInPipeOffPageConnector(dex_id="OPC-1")
+    opc_b = FlowInPipeOffPageConnector(dex_id="OPC-2")
+    reference = PipeOffPageConnectorReferenceByNumber(dex_id="REF-1")
+    opc_a.add_connector_reference(reference)
+    with pytest.raises(ValueError):
+        opc_b.add_connector_reference(reference)
+
+
+def test_pipe_off_page_connector_reference_is_abstract():
+    with pytest.raises(ValidationError):
+        PipeOffPageConnectorReference(dex_id="R-1")

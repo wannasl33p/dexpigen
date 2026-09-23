@@ -53,8 +53,12 @@ class ProcessInstrumentationFunction(
 
     The instrument tag is first-class (number, category, modifier, additional
     functions); every other DEXPI field lives in the generic ``custom_attributes``
-    bag.
+    bag. It composes the ``ActuatingFunction`` and ``SignalConveyingFunction``
+    objects that realise this function.
     """
+
+    component_class: ClassVar[str] = "ProcessInstrumentationFunction"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/ProcessInstrumentationFunction"
 
     process_instrumentation_function_number: str | None = None
     process_instrumentation_function_category: str | None = None
@@ -62,6 +66,42 @@ class ProcessInstrumentationFunction(
     process_instrumentation_functions: str | None = None
 
     custom_attributes: list[CustomAttribute] = Field(default_factory=list)
+    actuating_functions: list[ActuatingFunction] = Field(default_factory=list)
+    signal_conveying_functions: list[SignalConveyingFunction] = Field(
+        default_factory=list
+    )
+
+    @model_validator(mode="after")
+    def _bind_functions(self) -> Self:
+        for function in self.actuating_functions:
+            self._adopt_function(function)
+        for function in self.signal_conveying_functions:
+            self._adopt_function(function)
+        return self
+
+    def _adopt_function(
+        self, function: ActuatingFunction | SignalConveyingFunction
+    ) -> None:
+        owner = function._owner
+        if owner is not None and owner is not self:
+            raise ValueError(
+                "function is already owned by another process instrumentation function"
+            )
+        function._owner = self
+
+    def add_actuating_function(self, function: ActuatingFunction) -> Self:
+        """Compose ``function`` under this bubble, enforcing single ownership."""
+        self._adopt_function(function)
+        self.actuating_functions.append(function)
+        return self
+
+    def add_signal_conveying_function(
+        self, function: SignalConveyingFunction
+    ) -> Self:
+        """Compose ``function`` under this bubble, enforcing single ownership."""
+        self._adopt_function(function)
+        self.signal_conveying_functions.append(function)
+        return self
 
     def add_custom_attribute(self, attribute: CustomAttribute) -> Self:
         """Add a generic ``attribute`` to this bubble's customization bag."""
@@ -71,10 +111,14 @@ class ProcessInstrumentationFunction(
 
 class ProcessControlFunction(ProcessInstrumentationFunction):
     """A control/safeguarding system bubble (a function, not ``Equipment``)."""
+    component_class: ClassVar[str] = "ProcessControlFunction"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/ProcessControlFunction"
 
 
 class ControlledActuator(DexpiBaseModel):
     """The energy-to-motion transducer of a control-valve assembly."""
+    component_class: ClassVar[str] = "ControlledActuator"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/ControlledActuator"
 
     device_type_name: str | None = None
     fail_action: FailActionClassification | None = None
@@ -86,6 +130,8 @@ class ControlledActuator(DexpiBaseModel):
 
 class OperatedValveReference(DexpiBaseModel):
     """A reference to the ``OperatedValve`` a control-valve assembly controls."""
+    component_class: ClassVar[str] = "OperatedValveReference"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/OperatedValveReference"
 
     valve: OperatedValve | None = None
     sub_tag_name: str | None = None
@@ -95,6 +141,8 @@ class OperatedValveReference(DexpiBaseModel):
 
 class Positioner(DexpiBaseModel):
     """The positioner of a control-valve assembly."""
+    component_class: ClassVar[str] = "Positioner"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/Positioner"
 
     device_type_name: str | None = None
     sub_tag_name: str | None = None
@@ -104,6 +152,8 @@ class Positioner(DexpiBaseModel):
 
 class ActuatingSystem(DexpiBaseModel):
     """A control-valve physical assembly (actuator, valve reference, positioner)."""
+    component_class: ClassVar[str] = "ActuatingSystem"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/ActuatingSystem"
 
     actuating_system_number: str | None = None
     typical_information: str | None = None
@@ -158,17 +208,26 @@ class ActuatingFunction(
 ):
     """The control-loop function that references its assembly and location."""
 
+    component_class: ClassVar[str] = "ActuatingFunction"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/ActuatingFunction"
+
     actuating_function_number: str | None = None
 
     systems: ActuatingSystem | None = None
     actuating_location: PipingNetworkSegment | None = None
 
+    _owner: ProcessInstrumentationFunction | None = PrivateAttr(default=None)
+
 
 class SignalConveyingFunction(DexpiBaseModel):
     """A dashed signal line connecting two functions (no graphics)."""
+    component_class: ClassVar[str] = "SignalConveyingFunction"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/SignalConveyingFunction"
 
     source: SignalConveyingFunctionSource | None = None
     target: SignalConveyingFunctionTarget | None = None
+
+    _owner: ProcessInstrumentationFunction | None = PrivateAttr(default=None)
 
 
 class SignalOffPageConnector(DexpiBaseModel):
@@ -182,8 +241,14 @@ class FlowInSignalOffPageConnector(
 ):
     """A signal off-page connector that is a valid signal source."""
 
+    component_class: ClassVar[str] = "FlowInSignalOffPageConnector"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/FlowInSignalOffPageConnector"
+
 
 class FlowOutSignalOffPageConnector(
     SignalOffPageConnector, SignalConveyingFunctionTarget
 ):
     """A signal off-page connector that is a valid signal target."""
+
+    component_class: ClassVar[str] = "FlowOutSignalOffPageConnector"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/FlowOutSignalOffPageConnector"
