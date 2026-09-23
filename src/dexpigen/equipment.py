@@ -8,6 +8,7 @@ from typing import ClassVar, Self
 from pydantic import Field, PrivateAttr, model_validator
 
 from dexpigen.base import DexpiBaseModel
+from dexpigen.piping import PipingSourceItem, PipingTargetItem
 
 
 class Chamber(DexpiBaseModel):
@@ -27,8 +28,11 @@ class DryingChamber(Chamber):
     """A drying chamber (concrete; identity only in v0.1)."""
 
 
-class Nozzle(DexpiBaseModel):
-    """A nozzle composed under an equipment (DEXPI ``Equipment.Nozzle``)."""
+class Nozzle(PipingSourceItem, PipingTargetItem):
+    """A nozzle composed under an equipment (DEXPI ``Equipment.Nozzle``).
+
+    A nozzle is a piping source and target and owns its connection nodes.
+    """
 
     sub_tag_name: str | None = None
     chamber: Chamber | None = None
