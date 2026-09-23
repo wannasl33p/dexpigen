@@ -200,3 +200,36 @@ def test_fail_action_enum_restricts_values():
     assert actuator.fail_action == FailActionClassification.FAIL_OPEN
     with pytest.raises(ValidationError):
         actuator.fail_action = "not-a-fail-action"
+
+
+def test_actuating_system_add_controlled_actuator():
+    system = ActuatingSystem(dex_id="AS-1")
+    actuator = ControlledActuator(dex_id="CA-1")
+    assert system.add_controlled_actuator(actuator) is system
+    assert system.controlled_actuator is actuator
+
+
+def test_actuating_system_add_reference_and_positioner():
+    system = ActuatingSystem(dex_id="AS-1")
+    reference = OperatedValveReference(dex_id="OVR-1")
+    positioner = Positioner(dex_id="POS-1")
+    system.add_operated_valve_reference(reference)
+    system.add_positioner(positioner)
+    assert system.operated_valve_reference is reference
+    assert system.positioner is positioner
+
+
+def test_actuating_system_add_rejects_cross_owner():
+    actuator = ControlledActuator(dex_id="CA-1")
+    system_a = ActuatingSystem(dex_id="AS-1")
+    system_b = ActuatingSystem(dex_id="AS-2")
+    system_a.add_controlled_actuator(actuator)
+    with pytest.raises(ValueError):
+        system_b.add_controlled_actuator(actuator)
+
+
+def test_add_custom_attribute():
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    attribute = CustomAttribute(name="Location", value="rack 1")
+    assert pif.add_custom_attribute(attribute) is pif
+    assert attribute in pif.custom_attributes

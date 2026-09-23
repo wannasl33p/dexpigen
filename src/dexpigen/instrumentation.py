@@ -63,6 +63,11 @@ class ProcessInstrumentationFunction(
 
     custom_attributes: list[CustomAttribute] = Field(default_factory=list)
 
+    def add_custom_attribute(self, attribute: CustomAttribute) -> Self:
+        """Add a generic ``attribute`` to this bubble's customization bag."""
+        self.custom_attributes.append(attribute)
+        return self
+
 
 class ProcessControlFunction(ProcessInstrumentationFunction):
     """A control/safeguarding system bubble (a function, not ``Equipment``)."""
@@ -126,6 +131,26 @@ class ActuatingSystem(DexpiBaseModel):
         if owner is not None and owner is not self:
             raise ValueError("component is already owned by another actuating system")
         child._owner = self
+
+    def add_controlled_actuator(self, actuator: ControlledActuator) -> Self:
+        """Compose ``actuator`` under this system, enforcing single ownership."""
+        self._adopt(actuator)
+        self.controlled_actuator = actuator
+        return self
+
+    def add_operated_valve_reference(
+        self, reference: OperatedValveReference
+    ) -> Self:
+        """Compose ``reference`` under this system, enforcing single ownership."""
+        self._adopt(reference)
+        self.operated_valve_reference = reference
+        return self
+
+    def add_positioner(self, positioner: Positioner) -> Self:
+        """Compose ``positioner`` under this system, enforcing single ownership."""
+        self._adopt(positioner)
+        self.positioner = positioner
+        return self
 
 
 class ActuatingFunction(

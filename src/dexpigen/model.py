@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Self
+
 from pydantic import Field
 
 from dexpigen.base import DexpiBaseModel
@@ -28,3 +30,38 @@ class ConceptualModel(DexpiBaseModel):
     signal_conveying_functions: list[SignalConveyingFunction] = Field(
         default_factory=list
     )
+
+    def add_equipment(self, item: Equipment) -> Self:
+        """Aggregate ``item`` at the top level of this model."""
+        self.equipment.append(item)
+        return self
+
+    def add_piping_network_system(self, system: PipingNetworkSystem) -> Self:
+        """Aggregate ``system`` at the top level of this model."""
+        self.piping_network_systems.append(system)
+        return self
+
+    def add_process_instrumentation_function(
+        self, function: ProcessInstrumentationFunction
+    ) -> Self:
+        """Aggregate ``function`` at the top level of this model."""
+        self.process_instrumentation_functions.append(function)
+        return self
+
+    def add_actuating_system(self, system: ActuatingSystem) -> Self:
+        """Aggregate ``system`` at the top level of this model."""
+        self.actuating_systems.append(system)
+        return self
+
+    def add_actuating_function(self, function: ActuatingFunction) -> Self:
+        """Aggregate ``function`` at the top level of this model."""
+        self.actuating_functions.append(function)
+        return self
+
+    def add_signal_conveying_function(
+        self, function: SignalConveyingFunction
+    ) -> Self:
+        """Aggregate ``function`` at the top level of this model."""
+        self.signal_conveying_functions.append(function)
+        return self
+
