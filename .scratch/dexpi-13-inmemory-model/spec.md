@@ -8,7 +8,7 @@ An ML extraction pipeline produces a graph of a P&ID: typed plant items (equipme
 
 ## Solution
 
-A MIT-licensed Python 3.12 / Pydantic v2 library that holds the DEXPI 1.3 conceptual model in memory. Callers build typed objects directly (pyDEXPI-shaped constructors, nested composition, Python object references, `validate_assignment=True`). Every object carries a frozen UUID `id` and a required extraction `dex_id`. Construct-time invariants are enforced as objects are assembled, so an invalid graph cannot be produced. No Proteus writer, no NetworkX mapper, no graphics.
+A MIT-licensed Python 3.13 / Pydantic v2 library that holds the DEXPI 1.3 conceptual model in memory and serializes it to Proteus XML. Callers build typed objects directly (pyDEXPI-shaped constructors, nested composition, Python object references, `validate_assignment=True`). Every object carries a frozen UUID `id` and a required extraction `dex_id`. Construct-time invariants are enforced as objects are assembled, so an invalid graph cannot be produced. No NetworkX mapper, no graphics.
 
 ## User Stories
 
@@ -37,7 +37,7 @@ A MIT-licensed Python 3.12 / Pydantic v2 library that holds the DEXPI 1.3 concep
 23. As a library user, I want a signal line to connect only functions (`ProcessInstrumentationFunction`, `ProcessControlFunction`, `ActuatingFunction`, signal off-page connectors), so that it cannot be attached to physical equipment or nozzles.
 24. As a mapper, I want a dangling signal (missing `Source` or `Target`) to be representable, so that completeness is the mapper's concern, not a construction error.
 25. As a library user, I want the same Python object to be referenced from multiple fields (e.g. a valve referenced by an `OperatedValveReference`), so that references do not clone or re-parent their target.
-26. As a library user, I want a top-level `ConceptualModel` that aggregates all top-level objects (equipment, lines, functions, signal lines), so that there is a single root for the whole P&ID.
+26. As a library user, I want a top-level `ConceptualModel` that aggregates all top-level objects (equipment, lines, instrument functions, actuating systems), so that there is a single root for the whole P&ID. Signal lines and actuating functions are composed under their owning `ProcessInstrumentationFunction`.
 27. As a library user, I want construct-time invariants enforced — a composition child has exactly one owner, a reference resolves to the declared type, a nozzle's chamber belongs to the same equipment, a connection's node belongs to its endpoint item — so that invalid graphs are rejected at build time.
 28. As a library user, I want mutation to go through aggregate methods (e.g. add a nozzle, add a segment) with assignment re-validation, so that the model stays valid as it changes.
 29. As a library user, I want all DEXPI data fields to be optional (`0..1`) and only `id`/`dex_id` required, so that the model never claims a DEXPI-required field the spec does not mandate.
@@ -45,9 +45,9 @@ A MIT-licensed Python 3.12 / Pydantic v2 library that holds the DEXPI 1.3 concep
 
 ## Implementation Decisions
 
-**Module layout.** Split the library into modules mirroring the DEXPI packages: a base module (shared model), an equipment module (`Equipment` descendants, `Nozzle`, `CustomEquipment`), a piping module (systems, segments, pipes, components, valves, off-page connectors), an instrumentation module (`ProcessInstrumentationFunction`, `ProcessControlFunction`, `ActuatingFunction`, `ActuatingSystem`, `SignalConveyingFunction`, signal off-page connectors), plus physical-quantity and enumeration modules. Callers import official class names from these modules.
+**Module layout.** Split the library into modules mirroring the DEXPI packages: a base module (shared model), an equipment module (`Equipment` descendants, `Nozzle`, `Chamber`, `CustomEquipment`), a piping module (systems, segments, pipes, components, valves, off-page connectors), an instrumentation module (`ProcessInstrumentationFunction`, `ProcessControlFunction`, `ActuatingFunction`, `ActuatingSystem`, `SignalConveyingFunction`, signal off-page connectors), plus physical-quantity and enumeration modules, and a serialization module (`to_proteus_xml`). Callers import official class names from these modules.
 
-**Base model.** A single Pydantic `BaseModel` subclass with `model_config = ConfigDict(validate_assignment=True)` is the root of every class. It declares `id: str` (frozen, `default_factory` uuid4 string) and `dex_id: str` (required). `id` is the DEXPI wire-identity; `dex_id` is the extraction identifier and must not be used as `id`.
+**Base model.** A single Pydantic `BaseModel` subclass with `model_config = ConfigDict(validate_assignment=True)` is the root of every class. It declares `id: str` (frozen, `default_factory` uuid4 string), `dex_id: str` (required), and `custom_attributes: list[CustomAttribute]` (the DEXPI `CustomAttributeOwner` bag). `id` is a frozen in-memory object key; `dex_id` is the extraction identifier and is serialized as the Proteus `ID` attribute (the DEXPI instance identity).
 
 **Official names, concrete only.** Use official DEXPI 1.3 class names. Abstract classes (`Equipment`, `PipingComponent`, `PipeFitting`, `PipeOffPageConnector`, `PipingConnection`) are bases only and must not be instantiated; every instantiable class is a concrete 1.3 class with its own `ComponentClass`.
 
@@ -75,7 +75,6 @@ A MIT-licensed Python 3.12 / Pydantic v2 library that holds the DEXPI 1.3 concep
 
 ## Out of Scope
 
-- Proteus XML writer, serialization, XSD validation, and any round-trip acceptance gate.
 - The mapper from a NetworkX/entity graph into the model (a later effort; the 1:1 name rule is defined here but the mapper itself is not).
 - Graphics, coordinates, and the ShapeCatalogue.
 - Using this library as a CAE import/export product.
@@ -86,9 +85,10 @@ A MIT-licensed Python 3.12 / Pydantic v2 library that holds the DEXPI 1.3 concep
 - `FlameArrestor` / `RuptureDisc`.
 - Per-level `Custom*` equipment leaves and un-named deep equipment leaves.
 - JSON/reference serialization of the object graph.
+- XSD validation and a Proteus round-trip acceptance gate (generated XML is validated in the examples/tests, but the library itself only writes).
 
 ## Further Notes
 
 - Source of truth: the DEXPI P&ID Specification 1.3 (see the repo's data file) and the resolved wayfinder decisions (map + issue files). Use the project glossary (`CONTEXT.md`) for vocabulary throughout.
 - The model is entirely in-memory; there is no persistence layer.
-- Concrete class identity is carried by the Python class; mapping each concrete class to its DEXPI `ComponentClass`/RDL URI is a serialization concern reserved for the future writer.
+- Concrete class identity is carried by the Python class plus the `component_class`/`component_class_uri` ClassVars, which hold the DEXPI `ComponentClass`/RDL URI used by the writer.

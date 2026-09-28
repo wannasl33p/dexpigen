@@ -4,13 +4,13 @@ Label: `wayfinder:map`
 
 ## Destination
 
-A written spec a developer can implement without open architecture questions: a MIT-licensed Python 3.12 / Pydantic v2 in-memory DEXPI P&ID 1.3 ConceptualModel for the agreed PlantItem set, plus unit tests of construct-time invariants, plus a Proteus XML writer. No NetworkX mapper, no graphics.
+A written spec a developer can implement without open architecture questions: a MIT-licensed Python 3.13 / Pydantic v2 in-memory DEXPI P&ID 1.3 ConceptualModel for the agreed PlantItem set, plus unit tests of construct-time invariants, plus a Proteus XML writer. No NetworkX mapper, no graphics.
 
 ## Notes
 
 - Domain: DEXPI P&ID 1.3 conceptual model only. Source of truth: official spec (HTML/PDF 1.3 and GitLab tag `V1.3.0`). pyDEXPI is an architectural reference only, not a source of classes.
 - Skills: `domain-modeling`, `grilling` for HITL tickets; `research` for spec lookups.
-- Stack: Python 3.12, Pydantic v2, MIT.
+- Stack: Python 3.13, Pydantic v2, MIT.
 - Fallback for unknown equipment types: `CustomEquipment`.
 - Identity: frozen `id: str` (uuid4) plus required `dex_id: str`.
 - Construction: pyDEXPI-shaped Pydantic API (direct constructors, nested composition, object references, `validate_assignment=True`); official DEXPI class names only.
