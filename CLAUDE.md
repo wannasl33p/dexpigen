@@ -8,6 +8,7 @@ DEXPI 1.3 in-memory model — a Python library that holds a DEXPI P&ID 1.3 conce
 - **Glossary** — `CONTEXT.md` (domain vocabulary; use it for every term).
 - **Decisions** — `.scratch/dexpi-13-inmemory-model/map.md` + `issues/` (resolved architecture decisions).
 - **Research** — `.scratch/dexpi-13-inmemory-model/research/` (DEXPI 1.3 facts with citations).
+- **Examples** — `examples/C01/` is the versioned recovery of the reference P&ID (see its `README.md`): `build.py` builds the model for the latest milestone, `verNNN/c01.xml` is that milestone's golden serialization. Trim with `examples/trim_dexpi_xml.py`, validate with `examples/validate_dexpi.py` (xmllint + XSD).
 
 ## Rules
 
@@ -15,3 +16,4 @@ DEXPI 1.3 in-memory model — a Python library that holds a DEXPI P&ID 1.3 conce
 - **Python** — target **3.13** (`requires-python = ">=3.13"`).
 - **Typing** — modern typing only: `X | None` (not `typing.Optional`), builtin generics `list[...]` / `dict[...]` / `tuple[...]` (not `typing.List`), and `typing.Self` where appropriate. Pydantic v2.
 - **Language** — all comments and docstrings in **English**.
+- **Serialization validation** — after generating any Proteus XML, validate it against the bundled XSD `data/schemas/ProteusPIDSchema 4.1.1.xsd` with `xmllint --noout --schema <xsd> <xml>` (see `examples/validate_dexpi.py`). Generated output must be schema-valid before it is considered done.

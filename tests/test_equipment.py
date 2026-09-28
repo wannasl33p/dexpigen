@@ -7,7 +7,6 @@ import dexpigen.equipment as eq
 from dexpigen.equipment import (
     Chamber,
     CustomEquipment,
-    DryingChamber,
     Equipment,
     Nozzle,
     Pump,
@@ -84,9 +83,11 @@ def test_equipment_is_abstract():
         Equipment(dex_id="E-1")
 
 
-def test_chamber_is_abstract():
-    with pytest.raises(ValidationError):
-        Chamber(dex_id="C-1")
+def test_chamber_is_concrete():
+    chamber = Chamber(dex_id="C-1", sub_tag_name="Chamber 1")
+    assert chamber.dex_id == "C-1"
+    assert chamber.sub_tag_name == "Chamber 1"
+    assert chamber.component_class == "Chamber"
 
 
 def test_concrete_equipment_is_instantiable():
@@ -140,7 +141,7 @@ def test_nozzle_cannot_have_two_owners_via_constructor():
 def test_nozzle_chamber_must_belong_to_same_equipment():
     pump_a = Pump(dex_id="P-1")
     pump_b = Pump(dex_id="P-2")
-    chamber = DryingChamber(dex_id="C-1")
+    chamber = Chamber(dex_id="C-1")
     pump_a.add_drying_chamber(chamber)
     nozzle = Nozzle(dex_id="N-1", chamber=chamber)
     with pytest.raises(ValueError):
@@ -149,7 +150,7 @@ def test_nozzle_chamber_must_belong_to_same_equipment():
 
 def test_nozzle_chamber_same_equipment_is_allowed():
     pump = Pump(dex_id="P-1")
-    chamber = DryingChamber(dex_id="C-1")
+    chamber = Chamber(dex_id="C-1")
     pump.add_drying_chamber(chamber)
     nozzle = Nozzle(dex_id="N-1", chamber=chamber)
     pump.add_nozzle(nozzle)

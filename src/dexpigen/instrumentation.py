@@ -14,24 +14,11 @@ from __future__ import annotations
 
 from typing import ClassVar, Self
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from pydantic import Field, PrivateAttr, model_validator
 
-from dexpigen.base import DexpiBaseModel
+from dexpigen.base import CustomAttribute, DexpiBaseModel
 from dexpigen.enumerations import FailActionClassification
 from dexpigen.piping import OperatedValve, PipingNetworkSegment
-
-
-class CustomAttribute(BaseModel):
-    """A generic name/value entry in the DEXPI customization bag.
-
-    A value object, not an identified DEXPI instance, so it carries no ``id``/
-    ``dex_id``.
-    """
-
-    model_config = ConfigDict(validate_assignment=True)
-
-    name: str
-    value: str | None = None
 
 
 class SignalConveyingFunctionSource(DexpiBaseModel):
@@ -65,7 +52,6 @@ class ProcessInstrumentationFunction(
     process_instrumentation_function_modifier: str | None = None
     process_instrumentation_functions: str | None = None
 
-    custom_attributes: list[CustomAttribute] = Field(default_factory=list)
     actuating_functions: list[ActuatingFunction] = Field(default_factory=list)
     signal_conveying_functions: list[SignalConveyingFunction] = Field(
         default_factory=list
@@ -101,11 +87,6 @@ class ProcessInstrumentationFunction(
         """Compose ``function`` under this bubble, enforcing single ownership."""
         self._adopt_function(function)
         self.signal_conveying_functions.append(function)
-        return self
-
-    def add_custom_attribute(self, attribute: CustomAttribute) -> Self:
-        """Add a generic ``attribute`` to this bubble's customization bag."""
-        self.custom_attributes.append(attribute)
         return self
 
 

@@ -97,6 +97,17 @@ def test_line_number_is_optional():
     assert named.line_number == "100-P-1"
 
 
+def test_segment_fluid_and_piping_class_codes_are_optional():
+    segment = PipingNetworkSegment(dex_id="seg-1")
+    assert segment.fluid_code is None
+    assert segment.piping_class_code is None
+    named = PipingNetworkSegment(
+        dex_id="seg-2", fluid_code="MNb", piping_class_code="75HB13"
+    )
+    assert named.fluid_code == "MNb"
+    assert named.piping_class_code == "75HB13"
+
+
 def test_nozzle_is_a_valid_piping_source_and_target():
     nozzle = Nozzle(dex_id="N-1")
     source_pipe = Pipe(dex_id="p-1", source_item=nozzle)

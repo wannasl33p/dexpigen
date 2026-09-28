@@ -1,5 +1,5 @@
 """Equipment: the abstract ``Equipment`` root, its concrete subclasses,
-``Nozzle``, ``CustomEquipment``, and the minimal chamber reference type."""
+``Nozzle``, ``CustomEquipment``, and the concrete ``Chamber``."""
 
 from __future__ import annotations
 
@@ -12,22 +12,20 @@ from dexpigen.piping import PipingSourceItem, PipingTargetItem
 
 
 class Chamber(DexpiBaseModel):
-    """Abstract base for an equipment chamber (DEXPI ``Equipment.Chamber``).
+    """An equipment chamber (DEXPI ``Equipment.Chamber``).
 
-    The chamber *subtypes* are out of v0.1 scope; ``DryingChamber`` is the
-    minimal concrete stand-in required to type ``Nozzle.chamber`` and its
-    same-equipment invariant.
+    ``Chamber`` is concrete in DEXPI 1.3 (``ComponentClass="Chamber"``,
+    ``RDS903151421``); the chamber *subtypes* (``DryingChamber``, ...) are out of
+    v0.1 scope, so the generic ``Chamber`` is used directly, matching the
+    reference examples.
     """
 
-    _abstract: ClassVar[bool] = True
+    component_class: ClassVar[str] = "Chamber"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS903151421"
+
+    sub_tag_name: str | None = None
 
     _owner: Equipment | None = PrivateAttr(default=None)
-
-
-class DryingChamber(Chamber):
-    """A drying chamber (concrete; identity only in v0.1)."""
-    component_class: ClassVar[str] = "DryingChamber"
-    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/DryingChamber"
 
 
 class Nozzle(PipingSourceItem, PipingTargetItem):
@@ -57,7 +55,7 @@ class Equipment(DexpiBaseModel):
     equipment_description: str | None = None
 
     nozzles: list[Nozzle] = Field(default_factory=list)
-    drying_chambers: list[DryingChamber] = Field(default_factory=list)
+    drying_chambers: list[Chamber] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _bind_owned_children(self) -> Self:
@@ -78,7 +76,7 @@ class Equipment(DexpiBaseModel):
         self.nozzles.append(nozzle)
         return self
 
-    def add_drying_chamber(self, chamber: DryingChamber) -> Self:
+    def add_drying_chamber(self, chamber: Chamber) -> Self:
         """Compose ``chamber`` under this equipment, enforcing single ownership."""
         self._adopt_chamber(chamber)
         self.drying_chambers.append(chamber)
@@ -92,7 +90,7 @@ class Equipment(DexpiBaseModel):
             raise ValueError("nozzle chamber must belong to the same equipment")
         nozzle._owner = self
 
-    def _adopt_chamber(self, chamber: DryingChamber) -> None:
+    def _adopt_chamber(self, chamber: Chamber) -> None:
         owner = chamber._owner
         if owner is not None and owner is not self:
             raise ValueError("chamber is already owned by another equipment")

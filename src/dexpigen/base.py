@@ -1,9 +1,29 @@
 """Shared base layer for the DEXPI 1.3 in-memory conceptual model."""
 
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class CustomAttribute(BaseModel):
+    """A generic name/value entry in the DEXPI customization bag.
+
+    Mirrors a Proteus ``<GenericAttribute>``: an arbitrary RDL attribute whose
+    first-class field does not exist in the model. Every ``DexpiBaseModel``
+    carries a ``custom_attributes`` bag, matching DEXPI's ``CustomAttributeOwner``.
+    """
+
+    model_config = ConfigDict(validate_assignment=True)
+
+    name: str
+    value: str | None = None
+    format: str = "string"  # "string" | "double" | "anyURI" | "integer"
+    attribute_uri: str | None = None  # defaults to sandbox/<name>
+    units: str | None = None
+    units_uri: str | None = None
+    value_uri: str | None = None
+    language: str | None = None
 
 
 class DexpiBaseModel(BaseModel):
@@ -28,6 +48,8 @@ class DexpiBaseModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()), frozen=True)
     dex_id: str
 
+    custom_attributes: list[CustomAttribute] = Field(default_factory=list)
+
     _abstract: ClassVar[bool] = False
 
     # RDL discriminator, filled in by each concrete DEXPI class. Empty on the
@@ -35,6 +57,11 @@ class DexpiBaseModel(BaseModel):
     # ``ComponentClass`` (``Pipe`` -> ``<Connection>``, ``PipingNode`` -> ``<Node>``).
     component_class: ClassVar[str] = ""
     component_class_uri: ClassVar[str] = ""
+
+    def add_custom_attribute(self, attribute: CustomAttribute) -> Self:
+        """Add a generic ``attribute`` to this object's customization bag."""
+        self.custom_attributes.append(attribute)
+        return self
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)

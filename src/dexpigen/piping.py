@@ -33,6 +33,10 @@ class PipingNodeOwner(DexpiBaseModel):
     _abstract: ClassVar[bool] = True
 
     nodes: list[PipingNode] = Field(default_factory=list)
+    # 1-based indices into ``nodes`` naming the flow-in / flow-out ports
+    # (serialized as ConnectionPoints FlowIn/FlowOut). ``None`` = not declared.
+    flow_in_index: int | None = None
+    flow_out_index: int | None = None
 
     @model_validator(mode="after")
     def _bind_nodes(self) -> Self:
@@ -251,6 +255,8 @@ class PipingNetworkSegment(DexpiBaseModel):
     component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS267704"
 
     segment_number: str | None = None
+    fluid_code: str | None = None
+    piping_class_code: str | None = None
 
     items: list[PipingNetworkSegmentItem] = Field(default_factory=list)
     connections: list[PipingConnection] = Field(default_factory=list)
