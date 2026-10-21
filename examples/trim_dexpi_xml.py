@@ -7,7 +7,7 @@ the output is a pure subset of the input.
 Usage:
     uv run python examples/trim_dexpi_xml.py <src.xml> [<dst.xml>]
 
-Defaults to the C01 reference P&ID -> examples/c01_minimal.xml.
+Defaults to the C01 reference P&ID -> examples/C01/ver002/c01.xml.
 """
 
 import re
@@ -16,9 +16,9 @@ import sys
 DEFAULT_SRC = (
     r"data/example_pids/C01 DEXPI Reference P&ID/C01V04-VER.EX01.xml"
 )
-DEFAULT_DST = r"examples/C01/ver001/c01.xml"
+DEFAULT_DST = r"examples/C01/ver002/c01.xml"
 
-# Graphics / layout elements the v0.1 model has no field for.
+# Graphics / layout elements the current model has no field for.
 GRAPHICS_TAGS = {
     "Position", "Scale", "Label", "Text", "PolyLine", "Shape", "Circle",
     "Presentation", "Coordinate", "CenterLine", "Extent", "Drawing",
@@ -26,10 +26,9 @@ GRAPHICS_TAGS = {
     "InsulationSymbol", "Symbol", "ObjectAttributesReference",
 }
 
-# Whole objects outside the v0.1 model.
+# Whole objects outside the current model.
 UNSUPPORTED_TAGS = {
-    "MetaData", "PlantStructureItem", "InstrumentationLoopFunction",
-    "ProcessSignalGeneratingFunction", "ProcessSignalGeneratingSystem",
+    "MetaData", "PlantStructureItem", "ProcessSignalGeneratingSystem",
 }
 
 # ComponentClass values (under a supported tag) that we do not model.
@@ -37,10 +36,10 @@ UNSUPPORTED_CLASSES = {
     "TubeBundle", "Impeller", "Displacer",
     "ColumnSection", "ColumnPackingsArrangement", "ColumnTraysArrangement",
     "GearBox", "MotorAsComponent", "SprayNozzle",
-    "PipeTee", "BlindFlange", "SwingCheckValve", "SpringLoadedGlobeSafetyValve",
+    "BlindFlange", "SwingCheckValve", "SpringLoadedGlobeSafetyValve",
     "RestrictionOrifice", "Hose", "Compensator", "SightGlass", "Silencer",
     "SteamTrap", "PipeFlangeSpade", "PipeFlangeSpacer", "FlameArrestor",
-    "RuptureDisc", "FlowMeasuringElement", "PrimaryElement", "InlinePrimaryElement",
+    "RuptureDisc", "PrimaryElement", "InlinePrimaryElement",
     "VenturiTube", "FlowNozzle", "TurbineFlowMeter", "VariableAreaFlowMeter",
     "ElectromagneticFlowMeter", "MassFlowMeasuringElement",
     "VolumeFlowMeasuringElement",
@@ -51,7 +50,8 @@ UNSUPPORTED_CLASSES = {
 # Instrumentation objects whose ConnectionPoints/Node (signal nodes) we do not model.
 INSTRUMENT_TAGS = {
     "ProcessInstrumentationFunction", "ProcessControlFunction",
-    "InformationFlow", "ActuatingFunction", "ActuatingSystemComponent",
+    "ProcessSignalGeneratingFunction", "InformationFlow", "ActuatingFunction",
+    "ActuatingSystemComponent",
 }
 
 TAG_RE = re.compile(r"<[^>]*>")

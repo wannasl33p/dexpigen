@@ -19,10 +19,13 @@ from dexpigen.instrumentation import (
     ActuatingFunction,
     ActuatingSystem,
     ControlledActuator,
+    InstrumentationLoopFunction,
     OperatedValveReference,
     Positioner,
     ProcessInstrumentationFunction,
+    ProcessSignalGeneratingFunction,
     SignalConveyingFunction,
+    SignalConveyingFunctionSource,
 )
 from dexpigen.model import ConceptualModel
 from dexpigen.piping import (
@@ -33,6 +36,7 @@ from dexpigen.piping import (
     PipingNetworkSegment,
     PipingNetworkSystem,
     PipingNode,
+    SensingLocation,
 )
 
 SANDBOX = "http://sandbox.dexpi.org/rdl/"
@@ -123,6 +127,20 @@ def _attrs(**kw: Any) -> str:
     return "".join(f' {k}="{_esc(str(v))}"' for k, v in kw.items())
 
 
+def _item_attrs(obj: DexpiBaseModel, component_class: str) -> str:
+    """Identity attributes of a plant item: ID, ComponentClass(URI), ComponentName.
+
+    ``ComponentName`` is a Proteus-level attribute, emitted only when set.
+    """
+    extra: dict[str, str] = {}
+    if obj.component_name is not None:
+        extra["ComponentName"] = obj.component_name
+    return _attrs(
+        ID=obj.dex_id, ComponentClass=component_class,
+        ComponentClassURI=obj.component_class_uri, **extra,
+    )
+
+
 class _Writer:
     def __init__(self) -> None:
         self._lines: list[str] = []
@@ -208,10 +226,15 @@ def _field_attributes(obj: DexpiBaseModel) -> list[CustomAttribute]:
     elif isinstance(obj, ActuatingFunction):
         add(_string("ActuatingFunctionNumber", obj.actuating_function_number))
     elif isinstance(obj, ProcessInstrumentationFunction):
-        add(_string("ProcessInstrumentationFunctions", obj.process_instrumentation_functions))
+        add(_string("ProcessInstrumentationFunctions", obj.process_instrumentation_functions_code))
         add(_string("ProcessInstrumentationFunctionModifier", obj.process_instrumentation_function_modifier))
         add(_string("ProcessInstrumentationFunctionNumber", obj.process_instrumentation_function_number))
         add(_string("ProcessInstrumentationFunctionCategory", obj.process_instrumentation_function_category))
+    elif isinstance(obj, ProcessSignalGeneratingFunction):
+        add(_string("ProcessSignalGeneratingFunctionNumber", obj.process_signal_generating_function_number))
+        add(_string("SensorType", obj.sensor_type))
+    elif isinstance(obj, InstrumentationLoopFunction):
+        add(_string("InstrumentationLoopFunctionNumber", obj.instrumentation_loop_function_number))
 
     return attrs
 
@@ -272,7 +295,12 @@ CLASS_ORDER: dict[str, list[str]] = {
         "NominalDiameterRepresentationAssignmentClass", "NominalDiameterStandardSpecialization",
         "NominalDiameterTypeRepresentationAssignmentClass",
     ],
+    "ProcessSignalGeneratingFunction": [
+        "ProcessSignalGeneratingFunctionNumberAssignmentClass",
+        "SensorTypeAssignmentClass",
+    ],
     "PipeOffPageConnector": ["PipeConnectorNumberAssignmentClass"],
+    "InstrumentationLoopFunction": ["InstrumentationLoopFunctionNumberAssignmentClass"],
 }
 
 
@@ -305,6 +333,10 @@ def _class_key(obj: DexpiBaseModel) -> str:
         return "ActuatingFunction"
     if isinstance(obj, ProcessInstrumentationFunction):
         return "ProcessInstrumentationFunction"
+    if isinstance(obj, ProcessSignalGeneratingFunction):
+        return "ProcessSignalGeneratingFunction"
+    if isinstance(obj, InstrumentationLoopFunction):
+        return "InstrumentationLoopFunction"
     return ""
 
 
@@ -376,14 +408,46 @@ def _signals_targeting(function: ActuatingFunction) -> list[str]:
     return out
 
 
+def _signals_starting_at(source: SignalConveyingFunctionSource) -> list[str]:
+    out: list[str] = []
+    for pif in _MODEL.process_instrumentation_functions:  # type: ignore[union-attr]
+        for signal in pif.signal_conveying_functions:
+            if signal.source is source:
+                out.append(signal.dex_id)
+    return out
+
+
+def _signals_ending_at(pif: ProcessInstrumentationFunction) -> list[str]:
+    out: list[str] = []
+    for owner in _MODEL.process_instrumentation_functions:  # type: ignore[union-attr]
+        for signal in owner.signal_conveying_functions:
+            if signal.target is pif:
+                out.append(signal.dex_id)
+    return out
+
+
+def _psgfs_located_in(location: SensingLocation) -> list[str]:
+    out: list[str] = []
+    for pif in _MODEL.process_instrumentation_functions:  # type: ignore[union-attr]
+        for psgf in pif.process_signal_generating_functions:
+            if psgf.sensing_location is location:
+                out.append(psgf.dex_id)
+    return out
+
+
+def _loops_containing(pif: ProcessInstrumentationFunction) -> list[str]:
+    out: list[str] = []
+    for loop in _MODEL.instrumentation_loop_functions:  # type: ignore[union-attr]
+        if any(member is pif for member in loop.process_instrumentation_functions):
+            out.append(loop.dex_id)
+    return out
+
+
 # --- element emitters ---
 
 
 def _emit_actuating_system(w: _Writer, system: ActuatingSystem) -> None:
-    w.open("ActuatingSystem", _attrs(
-        ID=system.dex_id, ComponentClass="ActuatingSystem",
-        ComponentClassURI=system.component_class_uri,
-    ))
+    w.open("ActuatingSystem", _item_attrs(system, "ActuatingSystem"))
     _emit_generic_attributes(w, system)
     w.leaf("Association", _attrs(Type="fulfills", ItemID=_actuating_function_of(system)))
     if system.controlled_actuator is not None:
@@ -396,19 +460,13 @@ def _emit_actuating_system(w: _Writer, system: ActuatingSystem) -> None:
 
 
 def _emit_component(w: _Writer, component: ControlledActuator | Positioner) -> None:
-    w.open("ActuatingSystemComponent", _attrs(
-        ID=component.dex_id, ComponentClass=component.component_class,
-        ComponentClassURI=component.component_class_uri,
-    ))
+    w.open("ActuatingSystemComponent", _item_attrs(component, component.component_class))
     _emit_generic_attributes(w, component)
     w.close("ActuatingSystemComponent")
 
 
 def _emit_operated_valve_reference(w: _Writer, reference: OperatedValveReference) -> None:
-    w.open("ActuatingSystemComponent", _attrs(
-        ID=reference.dex_id, ComponentClass="OperatedValveReference",
-        ComponentClassURI=reference.component_class_uri,
-    ))
+    w.open("ActuatingSystemComponent", _item_attrs(reference, "OperatedValveReference"))
     _emit_generic_attributes(w, reference)
     if reference.valve is not None:
         w.leaf("Association", _attrs(Type="refers to", ItemID=reference.valve.dex_id))
@@ -416,10 +474,7 @@ def _emit_operated_valve_reference(w: _Writer, reference: OperatedValveReference
 
 
 def _emit_pns(w: _Writer, line: PipingNetworkSystem) -> None:
-    w.open("PipingNetworkSystem", _attrs(
-        ID=line.dex_id, ComponentClass="PipingNetworkSystem",
-        ComponentClassURI=line.component_class_uri,
-    ))
+    w.open("PipingNetworkSystem", _item_attrs(line, "PipingNetworkSystem"))
     _emit_generic_attributes(w, line)
     for segment in line.segments:
         _emit_segment(w, segment)
@@ -427,11 +482,10 @@ def _emit_pns(w: _Writer, line: PipingNetworkSystem) -> None:
 
 
 def _emit_segment(w: _Writer, segment: PipingNetworkSegment) -> None:
-    w.open("PipingNetworkSegment", _attrs(
-        ID=segment.dex_id, ComponentClass="PipingNetworkSegment",
-        ComponentClassURI=segment.component_class_uri,
-    ))
+    w.open("PipingNetworkSegment", _item_attrs(segment, "PipingNetworkSegment"))
     _emit_generic_attributes(w, segment)
+    for psgf_id in _psgfs_located_in(segment):
+        w.leaf("Association", _attrs(Type="is the location of", ItemID=psgf_id))
     for item in segment.items:
         if isinstance(item, PipeOffPageConnector):
             _emit_off_page_connector(w, item)
@@ -443,30 +497,23 @@ def _emit_segment(w: _Writer, segment: PipingNetworkSegment) -> None:
 
 
 def _emit_piping_component(w: _Writer, component: PipingComponent) -> None:
-    w.open("PipingComponent", _attrs(
-        ID=component.dex_id, ComponentClass=component.component_class,
-        ComponentClassURI=component.component_class_uri,
-    ))
+    w.open("PipingComponent", _item_attrs(component, component.component_class))
     _emit_connection_points(w, component)
     _emit_generic_attributes(w, component)
     for ref_id in _referenced_by(component):
         w.leaf("Association", _attrs(Type="is referenced by", ItemID=ref_id))
+    for psgf_id in _psgfs_located_in(component):
+        w.leaf("Association", _attrs(Type="is the location of", ItemID=psgf_id))
     w.close("PipingComponent")
 
 
 def _emit_off_page_connector(w: _Writer, connector: PipeOffPageConnector) -> None:
-    w.open("PipeOffPageConnector", _attrs(
-        ID=connector.dex_id, ComponentClass=connector.component_class,
-        ComponentClassURI=connector.component_class_uri,
-    ))
+    w.open("PipeOffPageConnector", _item_attrs(connector, connector.component_class))
     _emit_connection_points(w, connector)
     _emit_generic_attributes(w, connector)
     if connector.connector_reference is not None:
         ref = connector.connector_reference
-        w.open("PipeOffPageConnectorReference", _attrs(
-            ID=ref.dex_id, ComponentClass=ref.component_class,
-            ComponentClassURI=ref.component_class_uri,
-        ))
+        w.open("PipeOffPageConnectorReference", _item_attrs(ref, ref.component_class))
         _emit_generic_attributes(w, ref)
         w.close("PipeOffPageConnectorReference")
     w.close("PipeOffPageConnector")
@@ -506,10 +553,7 @@ def _emit_connection(w: _Writer, connection: Pipe) -> None:
 
 
 def _emit_equipment(w: _Writer, equipment: Equipment) -> None:
-    w.open("Equipment", _attrs(
-        ID=equipment.dex_id, ComponentClass=equipment.component_class,
-        ComponentClassURI=equipment.component_class_uri,
-    ))
+    w.open("Equipment", _item_attrs(equipment, equipment.component_class))
     _emit_generic_attributes(w, equipment)
     for nozzle in equipment.nozzles:
         _emit_nozzle(w, nozzle)
@@ -519,48 +563,67 @@ def _emit_equipment(w: _Writer, equipment: Equipment) -> None:
 
 
 def _emit_nozzle(w: _Writer, nozzle: Nozzle) -> None:
-    w.open("Nozzle", _attrs(
-        ID=nozzle.dex_id, ComponentClass="Nozzle",
-        ComponentClassURI=nozzle.component_class_uri,
-    ))
+    w.open("Nozzle", _item_attrs(nozzle, "Nozzle"))
     _emit_connection_points(w, nozzle)
     _emit_generic_attributes(w, nozzle)
     if nozzle.chamber is not None:
         w.leaf("Association", _attrs(Type="is located in", ItemID=nozzle.chamber.dex_id))
+    for psgf_id in _psgfs_located_in(nozzle):
+        w.leaf("Association", _attrs(Type="is the location of", ItemID=psgf_id))
     w.close("Nozzle")
 
 
 def _emit_chamber(w: _Writer, chamber: Chamber) -> None:
-    w.open("Equipment", _attrs(
-        ID=chamber.dex_id, ComponentClass="Chamber",
-        ComponentClassURI=chamber.component_class_uri,
-    ))
+    w.open("Equipment", _item_attrs(chamber, "Chamber"))
     _emit_generic_attributes(w, chamber)
     for nozzle_id in _nozzles_of(chamber):
         w.leaf("Association", _attrs(Type="is the location of", ItemID=nozzle_id))
     w.close("Equipment")
 
 
+def _emit_instrumentation_loop_function(
+    w: _Writer, loop: InstrumentationLoopFunction
+) -> None:
+    w.open("InstrumentationLoopFunction", _item_attrs(loop, loop.component_class))
+    _emit_generic_attributes(w, loop)
+    for pif in loop.process_instrumentation_functions:
+        w.leaf("Association", _attrs(Type="is a collection including", ItemID=pif.dex_id))
+    w.close("InstrumentationLoopFunction")
+
+
 def _emit_pif(w: _Writer, pif: ProcessInstrumentationFunction) -> None:
-    w.open("ProcessInstrumentationFunction", _attrs(
-        ID=pif.dex_id, ComponentClass="ProcessInstrumentationFunction",
-        ComponentClassURI=pif.component_class_uri,
-    ))
+    w.open("ProcessInstrumentationFunction", _item_attrs(pif, pif.component_class))
     _emit_generic_attributes(w, pif)
-    for signal in pif.signal_conveying_functions:
-        w.leaf("Association", _attrs(Type="is logical start of", ItemID=signal.dex_id))
+    # Child order follows the C01 reference (the XSD allows any order):
+    # signal associations, loop associations, InformationFlow, ActuatingFunction, PSGF.
+    # Signals may be composed under any PIF, so both ends scan the whole model.
+    for signal_id in _signals_starting_at(pif):
+        w.leaf("Association", _attrs(Type="is logical start of", ItemID=signal_id))
+    for signal_id in _signals_ending_at(pif):
+        w.leaf("Association", _attrs(Type="is logical end of", ItemID=signal_id))
+    for loop_id in _loops_containing(pif):
+        w.leaf("Association", _attrs(Type="is a part of", ItemID=loop_id))
     for signal in pif.signal_conveying_functions:
         _emit_signal(w, signal)
     for function in pif.actuating_functions:
         _emit_actuating_function(w, function)
+    for psgf in pif.process_signal_generating_functions:
+        _emit_psgf(w, psgf)
     w.close("ProcessInstrumentationFunction")
 
 
+def _emit_psgf(w: _Writer, psgf: ProcessSignalGeneratingFunction) -> None:
+    w.open("ProcessSignalGeneratingFunction", _item_attrs(psgf, psgf.component_class))
+    _emit_generic_attributes(w, psgf)
+    if psgf.sensing_location is not None:
+        w.leaf("Association", _attrs(Type="is located in", ItemID=psgf.sensing_location.dex_id))
+    for signal_id in _signals_starting_at(psgf):
+        w.leaf("Association", _attrs(Type="is logical start of", ItemID=signal_id))
+    w.close("ProcessSignalGeneratingFunction")
+
+
 def _emit_signal(w: _Writer, signal: SignalConveyingFunction) -> None:
-    w.open("InformationFlow", _attrs(
-        ID=signal.dex_id, ComponentClass="SignalConveyingFunction",
-        ComponentClassURI=signal.component_class_uri,
-    ))
+    w.open("InformationFlow", _item_attrs(signal, "SignalConveyingFunction"))
     if signal.source is not None:
         w.leaf("Association", _attrs(Type="has logical start", ItemID=signal.source.dex_id))
     if signal.target is not None:
@@ -569,10 +632,7 @@ def _emit_signal(w: _Writer, signal: SignalConveyingFunction) -> None:
 
 
 def _emit_actuating_function(w: _Writer, function: ActuatingFunction) -> None:
-    w.open("ActuatingFunction", _attrs(
-        ID=function.dex_id, ComponentClass="ActuatingFunction",
-        ComponentClassURI=function.component_class_uri,
-    ))
+    w.open("ActuatingFunction", _item_attrs(function, "ActuatingFunction"))
     _emit_generic_attributes(w, function)
     for signal_id in _signals_targeting(function):
         w.leaf("Association", _attrs(Type="is logical end of", ItemID=signal_id))
@@ -598,5 +658,7 @@ def to_proteus_xml(model: ConceptualModel) -> str:
         _emit_pif(w, pif)
     for equipment in model.equipment:
         _emit_equipment(w, equipment)
+    for loop in model.instrumentation_loop_functions:
+        _emit_instrumentation_loop_function(w, loop)
     w.close("PlantModel")
     return w.text()

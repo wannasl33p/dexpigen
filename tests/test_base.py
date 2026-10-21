@@ -44,3 +44,11 @@ def test_validate_assignment_revalidates_mutation():
     with pytest.raises(ValidationError):
         model.dex_id = None  # required str, not optional
     assert model.dex_id == "E-101"
+
+
+def test_component_name_defaults_to_none_and_is_an_instance_field():
+    model = DexpiBaseModel(dex_id="E-101")
+    assert model.component_name is None
+    named = DexpiBaseModel(dex_id="E-102", component_name="T_TYPE_CONNECTION_SHAPE")
+    assert named.component_name == "T_TYPE_CONNECTION_SHAPE"
+    assert "component_name" in DexpiBaseModel.model_fields

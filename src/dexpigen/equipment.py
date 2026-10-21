@@ -8,7 +8,7 @@ from typing import ClassVar, Self
 from pydantic import Field, PrivateAttr, model_validator
 
 from dexpigen.base import DexpiBaseModel
-from dexpigen.piping import PipingSourceItem, PipingTargetItem
+from dexpigen.piping import PipingSourceItem, PipingTargetItem, SensingLocation
 
 
 class Chamber(DexpiBaseModel):
@@ -28,10 +28,11 @@ class Chamber(DexpiBaseModel):
     _owner: Equipment | None = PrivateAttr(default=None)
 
 
-class Nozzle(PipingSourceItem, PipingTargetItem):
+class Nozzle(PipingSourceItem, PipingTargetItem, SensingLocation):
     """A nozzle composed under an equipment (DEXPI ``Equipment.Nozzle``).
 
-    A nozzle is a piping source and target and owns its connection nodes.
+    A nozzle is a piping source and target, a sensing location, and owns its
+    connection nodes.
     """
 
     component_class: ClassVar[str] = "Nozzle"

@@ -12,13 +12,17 @@ whose ``source``/``target`` reference functions only, via the abstract
 
 from __future__ import annotations
 
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 
 from pydantic import Field, PrivateAttr, model_validator
 
 from dexpigen.base import CustomAttribute, DexpiBaseModel
 from dexpigen.enumerations import FailActionClassification
-from dexpigen.piping import OperatedValve, PipingNetworkSegment
+from dexpigen.piping import OperatedValve, PipingNetworkSegment, SensingLocation
+
+_ALREADY_COMPOSED_MESSAGE = (
+    "function is already composed under this process instrumentation function"
+)
 
 
 class SignalConveyingFunctionSource(DexpiBaseModel):
@@ -31,6 +35,24 @@ class SignalConveyingFunctionTarget(DexpiBaseModel):
     """Abstract role: a valid ``SignalConveyingFunction`` target."""
 
     _abstract: ClassVar[bool] = True
+
+
+class ProcessSignalGeneratingFunction(SignalConveyingFunctionSource):
+    """The sensing function of a PIF: a signal source located on a piping object.
+
+    It is composed by its ``ProcessInstrumentationFunction`` and references the
+    ``SensingLocation`` (nozzle, piping component or segment) it is located in.
+    The location is a reference, not ownership, so it may be shared.
+    """
+
+    component_class: ClassVar[str] = "ProcessSignalGeneratingFunction"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/ProcessSignalGeneratingFunction"
+
+    process_signal_generating_function_number: str | None = None
+    sensor_type: str | None = None
+    sensing_location: SensingLocation | None = None
+
+    _owner: ProcessInstrumentationFunction | None = PrivateAttr(default=None)
 
 
 class ProcessInstrumentationFunction(
@@ -50,23 +72,53 @@ class ProcessInstrumentationFunction(
     process_instrumentation_function_number: str | None = None
     process_instrumentation_function_category: str | None = None
     process_instrumentation_function_modifier: str | None = None
-    process_instrumentation_functions: str | None = None
+    process_instrumentation_functions_code: str | None = None
 
     actuating_functions: list[ActuatingFunction] = Field(default_factory=list)
     signal_conveying_functions: list[SignalConveyingFunction] = Field(
         default_factory=list
     )
+    process_signal_generating_functions: list[ProcessSignalGeneratingFunction] = Field(
+        default_factory=list
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_renamed_keyword(cls, data: Any) -> Any:
+        # ``process_instrumentation_functions`` was renamed; fail loudly rather
+        # than letting ``extra=ignore`` drop the value silently.
+        if isinstance(data, dict) and "process_instrumentation_functions" in data:
+            raise ValueError(
+                "process_instrumentation_functions was renamed to "
+                "process_instrumentation_functions_code"
+            )
+        return data
 
     @model_validator(mode="after")
     def _bind_functions(self) -> Self:
+        # Pydantic re-runs this validator when an existing instance is validated
+        # again, so it must not reject functions already bound to this bubble.
+        # Duplicates within the same constructor list are rejected by identity.
+        for functions in (
+            self.actuating_functions,
+            self.signal_conveying_functions,
+            self.process_signal_generating_functions,
+        ):
+            if len({id(function) for function in functions}) != len(functions):
+                raise ValueError(_ALREADY_COMPOSED_MESSAGE)
         for function in self.actuating_functions:
             self._adopt_function(function)
         for function in self.signal_conveying_functions:
             self._adopt_function(function)
+        for function in self.process_signal_generating_functions:
+            self._adopt_function(function)
         return self
 
     def _adopt_function(
-        self, function: ActuatingFunction | SignalConveyingFunction
+        self,
+        function: ActuatingFunction
+        | SignalConveyingFunction
+        | ProcessSignalGeneratingFunction,
     ) -> None:
         owner = function._owner
         if owner is not None and owner is not self:
@@ -75,8 +127,20 @@ class ProcessInstrumentationFunction(
             )
         function._owner = self
 
+    def _reject_recomposition(
+        self,
+        function: ActuatingFunction
+        | SignalConveyingFunction
+        | ProcessSignalGeneratingFunction,
+    ) -> None:
+        # Re-composing would append the same object twice, giving two elements
+        # with one ``ID`` (schema-invalid XML).
+        if function._owner is self:
+            raise ValueError(_ALREADY_COMPOSED_MESSAGE)
+
     def add_actuating_function(self, function: ActuatingFunction) -> Self:
         """Compose ``function`` under this bubble, enforcing single ownership."""
+        self._reject_recomposition(function)
         self._adopt_function(function)
         self.actuating_functions.append(function)
         return self
@@ -85,8 +149,18 @@ class ProcessInstrumentationFunction(
         self, function: SignalConveyingFunction
     ) -> Self:
         """Compose ``function`` under this bubble, enforcing single ownership."""
+        self._reject_recomposition(function)
         self._adopt_function(function)
         self.signal_conveying_functions.append(function)
+        return self
+
+    def add_process_signal_generating_function(
+        self, function: ProcessSignalGeneratingFunction
+    ) -> Self:
+        """Compose ``function`` under this bubble, enforcing single ownership."""
+        self._reject_recomposition(function)
+        self._adopt_function(function)
+        self.process_signal_generating_functions.append(function)
         return self
 
 
@@ -94,6 +168,22 @@ class ProcessControlFunction(ProcessInstrumentationFunction):
     """A control/safeguarding system bubble (a function, not ``Equipment``)."""
     component_class: ClassVar[str] = "ProcessControlFunction"
     component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/ProcessControlFunction"
+
+
+class InstrumentationLoopFunction(DexpiBaseModel):
+    """A top-level loop function that collects one or more PIFs.
+
+    The PIFs are referenced, not composed: they stay top-level in the model and
+    may be referenced by more than one loop.
+    """
+
+    component_class: ClassVar[str] = "InstrumentationLoopFunction"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/InstrumentationLoopFunction"
+
+    instrumentation_loop_function_number: str | None = None
+    process_instrumentation_functions: list[ProcessInstrumentationFunction] = Field(
+        default_factory=list
+    )
 
 
 class ControlledActuator(DexpiBaseModel):

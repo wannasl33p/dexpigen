@@ -69,6 +69,13 @@ class PipingTargetItem(PipingNodeOwner):
     _abstract: ClassVar[bool] = True
 
 
+class SensingLocation(DexpiBaseModel):
+    """Abstract role: a piping object a process signal generating function can
+    be located in (``Nozzle``, ``PipingComponent``, ``PipingNetworkSegment``)."""
+
+    _abstract: ClassVar[bool] = True
+
+
 class PipingConnection(DexpiBaseModel):
     """Abstract base for a piping connection between two endpoints."""
 
@@ -107,7 +114,7 @@ class PipingNetworkSegmentItem(DexpiBaseModel):
 
 
 class PipingComponent(
-    PipingNetworkSegmentItem, PipingSourceItem, PipingTargetItem
+    PipingNetworkSegmentItem, PipingSourceItem, PipingTargetItem, SensingLocation
 ):
     """Abstract base for an in-line piping component (valve or fitting).
 
@@ -163,6 +170,13 @@ class GateValve(OperatedValve):
     component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS416519"
 
 
+class FlowMeasuringElement(PipingComponent):
+    """An in-line flow measuring element, a sensing location for a flow signal."""
+
+    component_class: ClassVar[str] = "FlowMeasuringElement"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/FlowMeasuringElement"
+
+
 class PipeFitting(PipingComponent):
     """Abstract base for pipe fittings (flange, reducer, line blind)."""
 
@@ -172,6 +186,9 @@ class PipeFitting(PipingComponent):
 class Flange(PipeFitting):
     component_class: ClassVar[str] = "Flange"
     component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS13307654"
+class PipeTee(PipeFitting):
+    component_class: ClassVar[str] = "PipeTee"
+    component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS427724"
 class PipeReducer(PipeFitting):
     component_class: ClassVar[str] = "PipeReducer"
     component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS416294"
@@ -249,7 +266,7 @@ class PipeOffPageConnectorReferenceByNumber(PipeOffPageConnectorReference):
     referenced_drawing_number: str | None = None
 
 
-class PipingNetworkSegment(DexpiBaseModel):
+class PipingNetworkSegment(SensingLocation):
     """A stretch of a ``PipingNetworkSystem``."""
     component_class: ClassVar[str] = "PipingNetworkSegment"
     component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS267704"

@@ -10,6 +10,7 @@ from dexpigen.base import DexpiBaseModel
 from dexpigen.equipment import Equipment
 from dexpigen.instrumentation import (
     ActuatingSystem,
+    InstrumentationLoopFunction,
     ProcessInstrumentationFunction,
 )
 from dexpigen.piping import PipingNetworkSystem
@@ -28,6 +29,9 @@ class ConceptualModel(DexpiBaseModel):
         default_factory=list
     )
     actuating_systems: list[ActuatingSystem] = Field(default_factory=list)
+    instrumentation_loop_functions: list[InstrumentationLoopFunction] = Field(
+        default_factory=list
+    )
 
     def add_equipment(self, item: Equipment) -> Self:
         """Aggregate ``item`` at the top level of this model."""
@@ -49,4 +53,11 @@ class ConceptualModel(DexpiBaseModel):
     def add_actuating_system(self, system: ActuatingSystem) -> Self:
         """Aggregate ``system`` at the top level of this model."""
         self.actuating_systems.append(system)
+        return self
+
+    def add_instrumentation_loop_function(
+        self, loop: InstrumentationLoopFunction
+    ) -> Self:
+        """Aggregate ``loop`` at the top level of this model."""
+        self.instrumentation_loop_functions.append(loop)
         return self

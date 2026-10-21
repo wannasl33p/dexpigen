@@ -1,6 +1,6 @@
 """Generate ``_extras.py``: the non-first-class GenericAttributes per object.
 
-Reads ``ver001/c01.xml`` and, for every element with an ``ID``, emits the
+Reads the current golden (``GOLDEN``, see below) and, for every element with an ``ID``, emits the
 ``GenericAttribute`` entries that are NOT first-class model fields into
 ``EXTRAS`` (a dict keyed by ``dex_id``). ``build.py`` applies these to each
 object's ``custom_attributes`` bag.
@@ -11,6 +11,9 @@ Run:  uv run python examples/C01/_gen_extras.py
 import xml.etree.ElementTree as ET
 
 SANDBOX = "http://sandbox.dexpi.org/rdl/"
+
+# The golden serialization the extras are derived from (latest milestone).
+GOLDEN = "examples/C01/ver002/c01.xml"
 
 # GenericAttribute names that are first-class model fields, per object type.
 # The serializer emits these from the model fields; they must not be duplicated
@@ -56,11 +59,16 @@ def first_class(tag: str, cc: str) -> set[str]:
             "ProcessInstrumentationFunctionModifierAssignmentClass",
             "ProcessInstrumentationFunctionsAssignmentClass",
         }
+    if tag == "ProcessSignalGeneratingFunction":
+        return {"ProcessSignalGeneratingFunctionNumberAssignmentClass",
+                "SensorTypeAssignmentClass"}
+    if tag == "InstrumentationLoopFunction":
+        return {"InstrumentationLoopFunctionNumberAssignmentClass"}
     return set()
 
 
 def main() -> None:
-    tree = ET.parse("examples/C01/ver001/c01.xml")
+    tree = ET.parse(GOLDEN)
     extras: dict[str, list[str]] = {}
 
     def walk(elem: ET.Element) -> None:

@@ -57,6 +57,11 @@ def test_spot_check_rds_uris():
     )
 
 
+def test_pipe_tee_identity_matches_rds_fitting():
+    assert pp.PipeTee.component_class == "PipeTee"
+    assert pp.PipeTee.component_class_uri == "http://data.posccaesar.org/rdl/RDS427724"
+
+
 def test_spot_check_sandbox_uris():
     assert (
         ins.ProcessInstrumentationFunction.component_class_uri

@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from dexpigen.enumerations import FailActionClassification
-from dexpigen.equipment import Nozzle, Pump
+from dexpigen.equipment import Chamber, Nozzle, Pump
 from dexpigen.instrumentation import (
     ActuatingFunction,
     ActuatingSystem,
@@ -12,16 +12,23 @@ from dexpigen.instrumentation import (
     CustomAttribute,
     FlowInSignalOffPageConnector,
     FlowOutSignalOffPageConnector,
+    InstrumentationLoopFunction,
     OperatedValveReference,
     Positioner,
     ProcessControlFunction,
     ProcessInstrumentationFunction,
+    ProcessSignalGeneratingFunction,
     SignalConveyingFunction,
     SignalConveyingFunctionSource,
     SignalConveyingFunctionTarget,
     SignalOffPageConnector,
 )
-from dexpigen.piping import CheckValve, OperatedValve, PipingNetworkSegment
+from dexpigen.piping import (
+    CheckValve,
+    FlowMeasuringElement,
+    OperatedValve,
+    PipingNetworkSegment,
+)
 
 
 def test_signal_roles_are_abstract():
@@ -46,12 +53,71 @@ def test_process_instrumentation_function_tag_fields():
         process_instrumentation_function_number="101",
         process_instrumentation_function_category="F",
         process_instrumentation_function_modifier="I",
-        process_instrumentation_functions="AL",
+        process_instrumentation_functions_code="AL",
     )
     assert pif.process_instrumentation_function_number == "101"
     assert pif.process_instrumentation_function_category == "F"
     assert pif.process_instrumentation_function_modifier == "I"
-    assert pif.process_instrumentation_functions == "AL"
+    assert pif.process_instrumentation_functions_code == "AL"
+
+
+def test_pif_old_process_instrumentation_functions_keyword_raises():
+    # The v0.1 str field was renamed to ``process_instrumentation_functions_code``.
+    # The old keyword must fail loudly instead of being dropped by ``extra=ignore``.
+    with pytest.raises(ValueError, match="process_instrumentation_functions_code"):
+        ProcessInstrumentationFunction(
+            dex_id="PIF-1", process_instrumentation_functions="AL",
+        )
+
+
+def test_control_function_old_process_instrumentation_functions_keyword_raises():
+    with pytest.raises(ValueError, match="process_instrumentation_functions_code"):
+        ProcessControlFunction(
+            dex_id="PCF-1", process_instrumentation_functions="AL",
+        )
+
+
+def test_instrumentation_loop_function_identity():
+    assert InstrumentationLoopFunction.component_class == "InstrumentationLoopFunction"
+    assert (
+        InstrumentationLoopFunction.component_class_uri
+        == "http://sandbox.dexpi.org/rdl/InstrumentationLoopFunction"
+    )
+    loop = InstrumentationLoopFunction(dex_id="ILF-1")
+    assert loop.component_class == "InstrumentationLoopFunction"
+    assert not hasattr(loop, "tag_name")
+
+
+def test_instrumentation_loop_function_defaults():
+    loop = InstrumentationLoopFunction(dex_id="ILF-1")
+    assert loop.instrumentation_loop_function_number is None
+    assert loop.process_instrumentation_functions == []
+
+
+def test_instrumentation_loop_function_references_pifs():
+    pif_1 = ProcessInstrumentationFunction(dex_id="PIF-1")
+    pif_2 = ProcessInstrumentationFunction(dex_id="PIF-2")
+    loop = InstrumentationLoopFunction(
+        dex_id="ILF-1",
+        instrumentation_loop_function_number="LOOP-7",
+        process_instrumentation_functions=[pif_1, pif_2],
+    )
+    assert loop.instrumentation_loop_function_number == "LOOP-7"
+    assert loop.process_instrumentation_functions[0] is pif_1
+    assert loop.process_instrumentation_functions[1] is pif_2
+
+
+def test_instrumentation_loop_function_does_not_take_ownership():
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    loop_a = InstrumentationLoopFunction(
+        dex_id="ILF-1", process_instrumentation_functions=[pif],
+    )
+    loop_b = InstrumentationLoopFunction(
+        dex_id="ILF-2", process_instrumentation_functions=[pif],
+    )
+    # A PIF may be referenced by two loops without any ownership error.
+    assert loop_a.process_instrumentation_functions[0] is pif
+    assert loop_b.process_instrumentation_functions[0] is pif
 
 
 def test_custom_attributes_bag():
@@ -261,3 +327,151 @@ def test_actuating_function_cannot_have_two_owners():
     pif_a.add_actuating_function(function)
     with pytest.raises(ValueError):
         pif_b.add_actuating_function(function)
+
+
+def test_psgf_identity_and_fields():
+    psgf = ProcessSignalGeneratingFunction(
+        dex_id="PSGF-1",
+        process_signal_generating_function_number="FT-101",
+        sensor_type="FT",
+    )
+    assert psgf.dex_id == "PSGF-1"
+    assert psgf.component_class == "ProcessSignalGeneratingFunction"
+    assert (
+        psgf.component_class_uri
+        == "http://sandbox.dexpi.org/rdl/ProcessSignalGeneratingFunction"
+    )
+    assert psgf.process_signal_generating_function_number == "FT-101"
+    assert psgf.sensor_type == "FT"
+    assert psgf.sensing_location is None
+
+
+def test_psgf_fields_are_optional():
+    psgf = ProcessSignalGeneratingFunction(dex_id="PSGF-1")
+    assert psgf.process_signal_generating_function_number is None
+    assert psgf.sensor_type is None
+
+
+def test_psgf_is_signal_source_only():
+    assert issubclass(ProcessSignalGeneratingFunction, SignalConveyingFunctionSource)
+    assert not issubclass(
+        ProcessSignalGeneratingFunction, SignalConveyingFunctionTarget
+    )
+
+
+def test_psgf_is_valid_signal_source_not_target():
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    psgf = ProcessSignalGeneratingFunction(dex_id="PSGF-1")
+    signal = SignalConveyingFunction(dex_id="S-1", source=psgf, target=pif)
+    assert signal.source is psgf
+    with pytest.raises(ValidationError):
+        SignalConveyingFunction(dex_id="S-2", source=pif, target=psgf)
+
+
+def test_psgf_sensing_location_accepts_sensing_locations():
+    segment = PipingNetworkSegment(dex_id="SEG-1")
+    element = FlowMeasuringElement(dex_id="FME-1")
+    nozzle = Nozzle(dex_id="N-1")
+    for location in (segment, element, nozzle):
+        psgf = ProcessSignalGeneratingFunction(dex_id="PSGF-1", sensing_location=location)
+        assert psgf.sensing_location is location
+
+
+def test_psgf_sensing_location_is_a_reference_not_ownership():
+    element = FlowMeasuringElement(dex_id="FME-1")
+    psgf = ProcessSignalGeneratingFunction(dex_id="PSGF-1", sensing_location=element)
+    assert psgf.sensing_location is element
+    # The sensing location does not compose the PSGF and may be referenced again.
+    other = ProcessSignalGeneratingFunction(dex_id="PSGF-2", sensing_location=element)
+    assert other.sensing_location is element
+
+
+def test_psgf_sensing_location_rejects_non_sensing_location():
+    with pytest.raises(ValidationError):
+        ProcessSignalGeneratingFunction(
+            dex_id="PSGF-1", sensing_location=Chamber(dex_id="CH-1")
+        )
+
+
+def test_pif_composes_psgf():
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    psgf = ProcessSignalGeneratingFunction(dex_id="PSGF-1")
+    pif.add_process_signal_generating_function(psgf)
+    assert psgf in pif.process_signal_generating_functions
+
+
+def test_pif_composes_psgf_via_constructor():
+    psgf = ProcessSignalGeneratingFunction(dex_id="PSGF-1")
+    pif = ProcessInstrumentationFunction(
+        dex_id="PIF-1", process_signal_generating_functions=[psgf]
+    )
+    assert pif.process_signal_generating_functions == [psgf]
+
+
+def test_psgf_cannot_have_two_owners():
+    pif_a = ProcessInstrumentationFunction(dex_id="PIF-1")
+    pif_b = ProcessInstrumentationFunction(dex_id="PIF-2")
+    psgf = ProcessSignalGeneratingFunction(dex_id="PSGF-1")
+    pif_a.add_process_signal_generating_function(psgf)
+    with pytest.raises(ValueError):
+        pif_b.add_process_signal_generating_function(psgf)
+
+
+def test_psgf_cannot_have_two_owners_via_constructor():
+    psgf = ProcessSignalGeneratingFunction(dex_id="PSGF-1")
+    ProcessInstrumentationFunction(dex_id="PIF-1", process_signal_generating_functions=[psgf])
+    with pytest.raises(ValueError):
+        ProcessInstrumentationFunction(
+            dex_id="PIF-2", process_signal_generating_functions=[psgf]
+        )
+
+
+def test_psgf_same_owner_readd_is_rejected():
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    psgf = ProcessSignalGeneratingFunction(dex_id="PSGF-1")
+    pif.add_process_signal_generating_function(psgf)
+    with pytest.raises(ValueError, match="already composed under this"):
+        pif.add_process_signal_generating_function(psgf)
+    assert pif.process_signal_generating_functions == [psgf]
+
+
+def test_actuating_function_same_owner_readd_is_rejected():
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    function = ActuatingFunction(dex_id="AF-1")
+    pif.add_actuating_function(function)
+    with pytest.raises(ValueError, match="already composed under this"):
+        pif.add_actuating_function(function)
+    assert pif.actuating_functions == [function]
+
+
+def test_signal_same_owner_readd_is_rejected():
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    signal = SignalConveyingFunction(dex_id="S-1")
+    pif.add_signal_conveying_function(signal)
+    with pytest.raises(ValueError, match="already composed under this"):
+        pif.add_signal_conveying_function(signal)
+    assert pif.signal_conveying_functions == [signal]
+
+
+@pytest.mark.parametrize(
+    ("field", "function"),
+    [
+        ("process_signal_generating_functions",
+         ProcessSignalGeneratingFunction(dex_id="PSGF-1")),
+        ("actuating_functions", ActuatingFunction(dex_id="AF-1")),
+        ("signal_conveying_functions", SignalConveyingFunction(dex_id="S-1")),
+    ],
+)
+def test_duplicate_function_in_constructor_list_is_rejected(field, function):
+    with pytest.raises(ValueError, match="already composed under this"):
+        ProcessInstrumentationFunction(dex_id="PIF-1", **{field: [function, function]})
+
+
+def test_same_function_in_constructor_list_is_not_bound_twice():
+    psgf = ProcessSignalGeneratingFunction(dex_id="PSGF-1")
+    pif = ProcessInstrumentationFunction(
+        dex_id="PIF-1", process_signal_generating_functions=[psgf],
+    )
+    with pytest.raises(ValueError, match="already composed under this"):
+        pif.add_process_signal_generating_function(psgf)
+    assert pif.process_signal_generating_functions == [psgf]

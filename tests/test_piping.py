@@ -24,6 +24,7 @@ from dexpigen.piping import (
     PipeOffPageConnectorReference,
     PipeOffPageConnectorReferenceByNumber,
     PipeReducer,
+    PipeTee,
     PipingComponent,
     PipingConnection,
     PipingNetworkSegment,
@@ -187,6 +188,29 @@ def test_valve_extraction_names_map_to_concrete_classes():
         assert hasattr(piping, name)
 
 
+def test_pipe_tee_is_concrete_pipe_fitting():
+    tee = PipeTee(dex_id="T-1")
+    assert isinstance(tee, PipeFitting)
+    assert isinstance(tee, PipingComponent)
+    assert tee.nodes == []
+    assert tee.flow_in_index is None
+    assert tee.flow_out_index is None
+
+
+def test_pipe_tee_identity():
+    assert PipeTee.component_class == "PipeTee"
+    assert PipeTee.component_class_uri == "http://data.posccaesar.org/rdl/RDS427724"
+
+
+def test_pipe_tee_accepts_three_nodes_without_validator():
+    tee = PipeTee(dex_id="T-1")
+    for i in range(3):
+        tee.add_node(PipingNode(dex_id=f"node-{i}"))
+    assert len(tee.nodes) == 3
+    # No node-count invariant: a tee with an unusual node count is still accepted.
+    PipeTee(dex_id="T-2", nodes=[PipingNode(dex_id="only-one")])
+
+
 def test_fittings_are_pipe_fitting_descendants():
     for cls in (Flange, PipeReducer, LineBlind):
         assert issubclass(cls, PipeFitting)
@@ -317,3 +341,34 @@ def test_connector_reference_cannot_have_two_owners():
 def test_pipe_off_page_connector_reference_is_abstract():
     with pytest.raises(ValidationError):
         PipeOffPageConnectorReference(dex_id="R-1")
+
+
+def test_sensing_location_is_abstract():
+    with pytest.raises(ValidationError):
+        piping.SensingLocation(dex_id="SL-1")
+
+
+def test_sensing_location_roles_are_inherited():
+    assert issubclass(Nozzle, piping.SensingLocation)
+    assert issubclass(piping.PipingComponent, piping.SensingLocation)
+    assert issubclass(piping.PipingNetworkSegment, piping.SensingLocation)
+    assert issubclass(piping.FlowMeasuringElement, piping.SensingLocation)
+    assert issubclass(piping.FlowMeasuringElement, piping.PipingComponent)
+
+
+def test_flow_measuring_element_is_concrete_piping_component():
+    element = piping.FlowMeasuringElement(dex_id="FME-1")
+    assert element.dex_id == "FME-1"
+    assert element.component_class == "FlowMeasuringElement"
+    assert (
+        element.component_class_uri
+        == "http://sandbox.dexpi.org/rdl/FlowMeasuringElement"
+    )
+    assert element.piping_component_number is None
+
+
+def test_sensing_location_mro_keeps_piping_component_roles():
+    element = piping.FlowMeasuringElement(dex_id="FME-1")
+    assert isinstance(element, piping.PipingSourceItem)
+    assert isinstance(element, piping.PipingTargetItem)
+    assert isinstance(element, piping.PipingNetworkSegmentItem)

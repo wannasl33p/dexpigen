@@ -2,23 +2,22 @@
 
 This is the model-builder half of a generation test sample: serializing the
 ``ConceptualModel`` returned by :func:`build` should reproduce
-``examples/C01/ver001/c01.xml``.
+``examples/C01/ver002/c01.xml``.
 
 The versioned-recovery workflow (see ``README.md`` in this folder): we grow the
 model toward fully covering the original C01 P&ID. Each ``verNNN/`` snapshot is
 the expected serialization for that milestone; ``build.py`` always builds the
-latest one. ``ver001/c01.xml`` was produced from the official C01 P&ID by
-``../trim_dexpi_xml.py``, which deletes only the tags the v0.1 model cannot
-represent (graphics, plant structure, ``MetaData``, ``InstrumentationLoopFunction``,
-``ProcessSignalGeneratingFunction``, the equipment internals
-``TubeBundle``/``Impeller``/``Displacer``, and the valve leaves
-``PipeTee``/``BlindFlange``/``SwingCheckValve``/``SpringLoadedGlobeSafetyValve``).
+latest one. ``ver002/c01.xml`` was produced from the official C01 P&ID by
+``../trim_dexpi_xml.py``, which deletes only the tags the current model cannot
+represent: graphics, plant structure, ``MetaData``, ``ProcessSignalGeneratingSystem``,
+the equipment internals ``TubeBundle``/``Impeller``/``Displacer``, the valve and
+fitting leaves ``BlindFlange``/``SwingCheckValve``/``SpringLoadedGlobeSafetyValve``,
+the flow-meter and primary-element classes, and the signal-level ``ConnectionPoints``
+and ``Node``s of instrumentation objects.
 
-Known mismatches to close before the writer round-trips this fixture:
-  * The XML gives ``PipingNetworkSegment`` its own ``FluidCode``/``PipingClassCode``
-    (now held by the model) and chambers a ``SubTagName`` (now held by ``Chamber``).
+Known gaps:
   * Nozzle nominal-diameter fields and other non-first-class data live in the
-    XML ``GenericAttributes`` and would map to ``CustomAttribute`` bags.
+    XML ``GenericAttributes`` and map to ``CustomAttribute`` bags (``_extras.py``).
 
 Run:  uv run python examples/C01/build.py
 """
@@ -44,8 +43,10 @@ from dexpigen.instrumentation import (
     ActuatingFunction,
     ActuatingSystem,
     ControlledActuator,
+    InstrumentationLoopFunction,
     OperatedValveReference,
     ProcessInstrumentationFunction,
+    ProcessSignalGeneratingFunction,
     SignalConveyingFunction,
 )
 from dexpigen.model import ConceptualModel
@@ -57,6 +58,7 @@ from dexpigen.piping import (
     GlobeValve,
     Pipe,
     PipeReducer,
+    PipeTee,
     PipingNetworkSegment,
     PipingNetworkSystem,
     PipingNode,
@@ -80,6 +82,17 @@ def _valve(cls, valve_id, in_node, out_node, number, name=None, fluid="MNc", flo
     valve.add_node(inlet)
     valve.add_node(outlet)
     return valve, inlet, outlet
+
+
+def _tee(tee_id, number, node_ids, flow_in, fluid="MNc"):
+    tee = PipeTee(
+        dex_id=tee_id, piping_component_number=number, fluid_code=fluid,
+        flow_in_index=flow_in, component_name="T_TYPE_CONNECTION_SHAPE",
+    )
+    nodes = [PipingNode(dex_id=node_id) for node_id in node_ids]
+    for node in nodes:
+        tee.add_node(node)
+    return tee, nodes
 
 
 def _apply_extras(model: ConceptualModel) -> None:
@@ -111,6 +124,10 @@ def _apply_extras(model: ConceptualModel) -> None:
             apply(af)
         for signal in pif.signal_conveying_functions:
             apply(signal)
+        for psgf in pif.process_signal_generating_functions:
+            apply(psgf)
+    for loop in model.instrumentation_loop_functions:
+        apply(loop)
     for system in model.actuating_systems:
         apply(system)
         for component in (
@@ -209,10 +226,17 @@ def build() -> ConceptualModel:
     butterfly_1, _, _ = _valve(ButterflyValve, "ButterflyValve-1", "PipingNode-4", "PipingNode-5", "C1", "66KL21", flow_in=2, flow_out=1)
     reducer_1, _, reducer_1_out = _valve(PipeReducer, "PipeReducer-1", "PipingNode-8", "PipingNode-9", "C3", flow_out=None)
     ball_1, _, _ = _valve(BallValve, "BallValve-1", "PipingNode-10", "PipingNode-11", "C4", "73KH12")
-    ball_2, _, _ = _valve(BallValve, "BallValve-2", "PipingNode-17", "PipingNode-18", "C2", "73KH12", flow_in=2, flow_out=None)
+    ball_2, ball_2_in, _ = _valve(BallValve, "BallValve-2", "PipingNode-17", "PipingNode-18", "C2", "73KH12", flow_in=2, flow_out=None)
     ball_3, _, _ = _valve(BallValve, "BallValve-3", "PipingNode-25", "PipingNode-26", "C5", "73KH12")
     ball_4, _, _ = _valve(BallValve, "BallValve-4", "PipingNode-28", "PipingNode-29", "C7", "73KH12")
     ball_5, _, _ = _valve(BallValve, "BallValve-5", "PipingNode-36", "PipingNode-37", "C10", "73KH12")
+
+    # ================= Pipe tees (process nodes; the default node is implicit) =================
+    tee_2, (tee_2_n1, tee_2_n2, tee_2_n3) = _tee("PipeTee-2", "C1", ["PipingNode-14", "PipingNode-15", "PipingNode-16"], flow_in=2)
+    tee_1, (tee_1_n1, tee_1_n2, tee_1_n3) = _tee("PipeTee-1", "C3", ["PipingNode-19", "PipingNode-20", "PipingNode-21"], flow_in=1)
+    tee_3, (tee_3_n1, tee_3_n2, tee_3_n3) = _tee("PipeTee-3", "C4", ["PipingNode-22", "PipingNode-23", "PipingNode-24"], flow_in=1)
+    tee_4, (tee_4_n1, tee_4_n2, tee_4_n3) = _tee("PipeTee-4", "C8", ["PipingNode-30", "PipingNode-31", "PipingNode-32"], flow_in=1)
+    tee_5, (tee_5_n1, tee_5_n2, tee_5_n3) = _tee("PipeTee-5", "C9", ["PipingNode-33", "PipingNode-34", "PipingNode-35"], flow_in=1)
 
     flow_in, flow_in_node = FlowInPipeOffPageConnector(dex_id="FlowInPipeOffPageConnector-1", flow_out_index=1), PipingNode(dex_id="PipingNode-1")
     flow_in.add_node(flow_in_node)
@@ -263,16 +287,40 @@ def build() -> ConceptualModel:
     lines.append(PipingNetworkSystem(
         dex_id="PipingNetworkSystem-6", line_number="47126", fluid_code="MNc", piping_class_code="75HB13",
         segments=[
-            PipingNetworkSegment(dex_id="PipingNetworkSegment-9", segment_number="S1", fluid_code="MNc", piping_class_code="75HB13"),
-            PipingNetworkSegment(dex_id="PipingNetworkSegment-10", segment_number="S2", fluid_code="MNc", piping_class_code="75HB13", items=[ball_2]),
-            PipingNetworkSegment(dex_id="PipingNetworkSegment-11", segment_number="S3", fluid_code="MNc", piping_class_code="75HB13"),
-            PipingNetworkSegment(dex_id="PipingNetworkSegment-12", segment_number="S4", fluid_code="MNc", piping_class_code="75HB13"),
+            PipingNetworkSegment(dex_id="PipingNetworkSegment-9", segment_number="S1", fluid_code="MNc", piping_class_code="75HB13", items=[tee_2], connections=[
+                Pipe(dex_id="Pipe-10", source_item=nozzle_9, source_node=nozzle_9_node,
+                     target_item=tee_2, target_node=tee_2_n1),
+            ]),
+            PipingNetworkSegment(dex_id="PipingNetworkSegment-10", segment_number="S2", fluid_code="MNc", piping_class_code="75HB13", items=[ball_2], connections=[
+                Pipe(dex_id="Pipe-11", source_item=tee_2, source_node=tee_2_n3,
+                     target_item=ball_2, target_node=ball_2_in),
+            ]),
+            PipingNetworkSegment(dex_id="PipingNetworkSegment-11", segment_number="S3", fluid_code="MNc", piping_class_code="75HB13", items=[tee_1], connections=[
+                Pipe(dex_id="Pipe-12", source_item=tee_2, source_node=tee_2_n1,
+                     target_item=tee_1, target_node=tee_1_n2),
+            ]),
+            PipingNetworkSegment(dex_id="PipingNetworkSegment-12", segment_number="S4", fluid_code="MNc", piping_class_code="75HB13", items=[tee_3], connections=[
+                Pipe(dex_id="Pipe-13", source_item=tee_1, source_node=tee_1_n2,
+                     target_item=tee_3, target_node=tee_3_n2),
+            ]),
             PipingNetworkSegment(dex_id="PipingNetworkSegment-13", segment_number="S5", fluid_code="MNc", piping_class_code="75HB13", items=[ball_3]),
-            PipingNetworkSegment(dex_id="PipingNetworkSegment-14", segment_number="S6", fluid_code="MNc", piping_class_code="75HB13", items=[ball_4]),
-            PipingNetworkSegment(dex_id="PipingNetworkSegment-15", segment_number="S7", fluid_code="MNc", piping_class_code="75HB13"),
-            PipingNetworkSegment(dex_id="PipingNetworkSegment-16", segment_number="S8", fluid_code="MNc", piping_class_code="75HB13"),
+            PipingNetworkSegment(dex_id="PipingNetworkSegment-14", segment_number="S6", fluid_code="MNc", piping_class_code="75HB13", items=[ball_4, tee_4], connections=[
+                Pipe(dex_id="Pipe-14", source_item=tee_3, source_node=tee_3_n2,
+                     target_item=tee_4, target_node=tee_4_n2),
+            ]),
+            PipingNetworkSegment(dex_id="PipingNetworkSegment-15", segment_number="S7", fluid_code="MNc", piping_class_code="75HB13", connections=[
+                Pipe(dex_id="Pipe-15", source_item=tee_4, source_node=tee_4_n3,
+                     target_item=nozzle_10, target_node=nozzle_10_node),
+            ]),
+            PipingNetworkSegment(dex_id="PipingNetworkSegment-16", segment_number="S8", fluid_code="MNc", piping_class_code="75HB13", items=[tee_5], connections=[
+                Pipe(dex_id="Pipe-16", source_item=tee_4, source_node=tee_4_n2,
+                     target_item=tee_5, target_node=tee_5_n2),
+            ]),
             PipingNetworkSegment(dex_id="PipingNetworkSegment-17", segment_number="S9", fluid_code="MNc", piping_class_code="75HB13", items=[ball_5]),
-            PipingNetworkSegment(dex_id="PipingNetworkSegment-18", segment_number="S10", fluid_code="MNc", piping_class_code="75HB13", items=[flow_out]),
+            PipingNetworkSegment(dex_id="PipingNetworkSegment-18", segment_number="S10", fluid_code="MNc", piping_class_code="75HB13", items=[flow_out], connections=[
+                Pipe(dex_id="Pipe-17", source_item=tee_5, source_node=tee_5_n2,
+                     target_item=flow_out, target_node=flow_out_node),
+            ]),
         ],
     ))
     lines.append(PipingNetworkSystem(
@@ -347,28 +395,39 @@ def build() -> ConceptualModel:
         dex_id="ProcessInstrumentationFunction-1",
         process_instrumentation_function_number="4712.01",
         process_instrumentation_function_category="P",
-        process_instrumentation_functions="I",
+        process_instrumentation_functions_code="I",
     )
 
     pif_2 = ProcessInstrumentationFunction(
         dex_id="ProcessInstrumentationFunction-2",
         process_instrumentation_function_number="4712.02",
         process_instrumentation_function_category="P",
-        process_instrumentation_functions="ICSA",
+        process_instrumentation_functions_code="ICSA",
     )
     af_1 = ActuatingFunction(
         dex_id="ActuatingFunction-1", actuating_function_number="PV4712.02", systems=as_1,
     )
+    psgf_1 = ProcessSignalGeneratingFunction(
+        dex_id="ProcessSignalGeneratingFunction-1",
+        process_signal_generating_function_number="PT4712.01",
+    )
+    pif_1.add_process_signal_generating_function(psgf_1)
+
     pif_2.add_actuating_function(af_1)
     pif_2.add_signal_conveying_function(SignalConveyingFunction(
         dex_id="SignalConveyingFunction-1", source=pif_2, target=af_1,
     ))
+    psgf_2 = ProcessSignalGeneratingFunction(
+        dex_id="ProcessSignalGeneratingFunction-2",
+        process_signal_generating_function_number="PT4712.02",
+    )
+    pif_2.add_process_signal_generating_function(psgf_2)
 
     pif_3 = ProcessInstrumentationFunction(
         dex_id="ProcessInstrumentationFunction-3",
         process_instrumentation_function_number="4750.01",
         process_instrumentation_function_category="H",
-        process_instrumentation_functions="S",
+        process_instrumentation_functions_code="S",
     )
     af_2 = ActuatingFunction(
         dex_id="ActuatingFunction-2", actuating_function_number="HV4750.01", systems=as_2,
@@ -382,15 +441,43 @@ def build() -> ConceptualModel:
         dex_id="ProcessInstrumentationFunction-4",
         process_instrumentation_function_number="4750.03",
         process_instrumentation_function_category="T",
-        process_instrumentation_functions="ICSA",
+        process_instrumentation_functions_code="ICSA",
     )
     af_3 = ActuatingFunction(
         dex_id="ActuatingFunction-3", actuating_function_number="TV4750.03", systems=as_3,
+    )
+    psgf_3 = ProcessSignalGeneratingFunction(
+        dex_id="ProcessSignalGeneratingFunction-3",
+        process_signal_generating_function_number="TT4750.03",
+        sensing_location=nozzle_17,
     )
     pif_4.add_actuating_function(af_3)
     pif_4.add_signal_conveying_function(SignalConveyingFunction(
         dex_id="SignalConveyingFunction-3", source=pif_4, target=af_3,
     ))
+    pif_4.add_process_signal_generating_function(psgf_3)
+
+    # ================= Instrumentation loop functions =================
+    loop_1 = InstrumentationLoopFunction(
+        dex_id="InstrumentationLoopFunction-1",
+        instrumentation_loop_function_number="4712.01",
+        process_instrumentation_functions=[pif_1],
+    )
+    loop_2 = InstrumentationLoopFunction(
+        dex_id="InstrumentationLoopFunction-2",
+        instrumentation_loop_function_number="4712.02",
+        process_instrumentation_functions=[pif_2],
+    )
+    loop_3 = InstrumentationLoopFunction(
+        dex_id="InstrumentationLoopFunction-3",
+        instrumentation_loop_function_number="4750.01",
+        process_instrumentation_functions=[pif_3],
+    )
+    loop_4 = InstrumentationLoopFunction(
+        dex_id="InstrumentationLoopFunction-4",
+        instrumentation_loop_function_number="4750.03",
+        process_instrumentation_functions=[pif_4],
+    )
 
     # ================= Root =================
     model = ConceptualModel(
@@ -399,6 +486,7 @@ def build() -> ConceptualModel:
         piping_network_systems=lines,
         process_instrumentation_functions=[pif_1, pif_2, pif_3, pif_4],
         actuating_systems=[as_1, as_2, as_3],
+        instrumentation_loop_functions=[loop_1, loop_2, loop_3, loop_4],
     )
     _apply_extras(model)
     return model

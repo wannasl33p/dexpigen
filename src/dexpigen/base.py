@@ -49,6 +49,9 @@ class DexpiBaseModel(BaseModel):
     dex_id: str
 
     custom_attributes: list[CustomAttribute] = Field(default_factory=list)
+    # Proteus ``ComponentName`` wire attribute (e.g. a shape-library name). It is
+    # not a DEXPI data field; the serializer emits it only when set.
+    component_name: str | None = None
 
     _abstract: ClassVar[bool] = False
 

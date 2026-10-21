@@ -104,6 +104,21 @@ EXTRAS: dict[str, list[CustomAttribute]] = {
     'PipeReducer-1': [
         CustomAttribute(name='PipingClassCodeAssignmentClass', value='73HG12'),
     ],
+    'PipeTee-1': [
+        CustomAttribute(name='PipingClassCodeAssignmentClass', value='75HB13'),
+    ],
+    'PipeTee-2': [
+        CustomAttribute(name='PipingClassCodeAssignmentClass', value='75HB13'),
+    ],
+    'PipeTee-3': [
+        CustomAttribute(name='PipingClassCodeAssignmentClass', value='75HB13'),
+    ],
+    'PipeTee-4': [
+        CustomAttribute(name='PipingClassCodeAssignmentClass', value='75HB13'),
+    ],
+    'PipeTee-5': [
+        CustomAttribute(name='PipingClassCodeAssignmentClass', value='75HB13'),
+    ],
     'PipingNetworkSegment-1': [
         CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='80'),
         CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 80'),
@@ -355,6 +370,24 @@ EXTRAS: dict[str, list[CustomAttribute]] = {
         CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
         CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
     ],
+    'PipingNode-14': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-15': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-16': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='25'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 25'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn25', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn25'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
     'PipingNode-17': [
         CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='25'),
         CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 25'),
@@ -367,10 +400,46 @@ EXTRAS: dict[str, list[CustomAttribute]] = {
         CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn25', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn25'),
         CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
     ],
+    'PipingNode-19': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
     'PipingNode-2': [
         CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='80'),
         CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 80'),
         CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn80', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn80'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-20': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-21': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='25'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 25'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn25', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn25'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-22': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-23': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-24': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='25'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 25'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn25', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn25'),
         CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
     ],
     'PipingNode-25': [
@@ -401,6 +470,42 @@ EXTRAS: dict[str, list[CustomAttribute]] = {
         CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='80'),
         CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 80'),
         CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn80', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn80'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-30': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-31': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-32': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-33': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-34': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='50'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 50'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn50', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn50'),
+        CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
+    ],
+    'PipingNode-35': [
+        CustomAttribute(name='NominalDiameterNumericalValueRepresentationAssignmentClass', value='25'),
+        CustomAttribute(name='NominalDiameterRepresentationAssignmentClass', value='DN 25'),
+        CustomAttribute(name='NominalDiameterStandardSpecialization', value='Din2448ObjectDn25', format='anyURI', value_uri='http://sandbox.dexpi.org/rdl/Din2448ObjectDn25'),
         CustomAttribute(name='NominalDiameterTypeRepresentationAssignmentClass', value='DN'),
     ],
     'PipingNode-36': [

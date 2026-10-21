@@ -14,8 +14,9 @@ until one version is byte-equivalent to the original.
 examples/C01/
   build.py            # builds the in-memory ConceptualModel for the latest version
   ver001/
-    c01.xml           # expected serialization of build() at version 1
-  ver002/ ...         # next milestone, once the model grows
+    c01.xml           # historical snapshot: serialization of build() at milestone 1
+  ver002/
+    c01.xml           # golden reference for the current build(): milestone 2
 ```
 
 - `build.py` always builds the **latest** milestone's model.
@@ -46,12 +47,28 @@ uv run python examples/validate_dexpi.py examples/C01/verNNN/c01.xml
 This wraps `xmllint --noout --schema data/schemas/ProteusPIDSchema 4.1.1.xsd <xml>`.
 The same rule is enforced by `tests/test_serialization.py`.
 
-## Known gaps at ver001 (what still needs model growth)
+## Known gaps at ver002 (what trim still drops)
 
-- `Chamber` serializes as `ComponentClass="Chamber"` (fixed); the chamber subtypes
-  are not modeled.
-- `PipingNetworkSegment` has `fluid_code` / `piping_class_code` (added at ver001).
-- Nozzle nominal-diameter fields and other non-first-class data would map to
-  `CustomAttribute` bags (writer concern, not yet in the model).
-- `ComponentName` attributes (graphics references) and blank lines from the
-  trimmed elements are left in `ver001/c01.xml`.
+Still trimmed out of `ver002/c01.xml` (no model support yet):
+
+- Graphics and layout (`Position`, `Shape`, `Presentation`, `Drawing`, ...); `MetaData`,
+  `PlantStructureItem`, `ProcessSignalGeneratingSystem`.
+- Equipment internals `TubeBundle`, `Impeller`, `Displacer`, and column internals
+  (`ColumnSection`, packings and trays arrangements).
+- Valve and fitting leaves `BlindFlange`, `SwingCheckValve`, `SpringLoadedGlobeSafetyValve`,
+  and the other fitting/valve classes listed in `trim_dexpi_xml.py`.
+- Primary elements and flow meters (`PrimaryElement`, `InlinePrimaryElement`,
+  `VenturiTube`, ...). `FlowMeasuringElement` is modelled, but C01 contains none.
+- Signal-level `ConnectionPoints` and `Node`s of instrumentation objects, and the
+  `Connection`s between them (`INSTRUMENT_TAGS` in `trim_dexpi_xml.py`).
+- The sensing layer is exercised only lightly by the ver002 golden: there are 3
+  `ProcessSignalGeneratingFunction`s, only one has a location (`Nozzle-17`), none is a
+  signal source, and C01 contains no `FlowMeasuringElement`. Those paths are covered
+  by unit tests instead.
+
+Data not yet first-class (kept as `CustomAttribute` in `_extras.py`):
+
+- Nominal-diameter fields on pipe-tee and piping-node `GenericAttributes`, the
+  `PipingClassCode` of piping components, and similar non-first-class data.
+- `ComponentName` attributes (graphics references) are emitted only where the model
+  sets `component_name` (pipe tees); blank lines from trimmed elements remain in the golden.

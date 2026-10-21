@@ -3,6 +3,7 @@
 from dexpigen.equipment import Nozzle, Pump
 from dexpigen.instrumentation import (
     ActuatingSystem,
+    InstrumentationLoopFunction,
     ProcessInstrumentationFunction,
     SignalConveyingFunction,
 )
@@ -75,3 +76,29 @@ def test_conceptual_model_add_methods():
     assert system in model.piping_network_systems
     assert pif in model.process_instrumentation_functions
     assert actuating_system in model.actuating_systems
+
+
+def test_conceptual_model_instrumentation_loop_functions_default_empty():
+    model = ConceptualModel(dex_id="M-1")
+    assert model.instrumentation_loop_functions == []
+
+
+def test_conceptual_model_add_instrumentation_loop_function():
+    model = ConceptualModel(dex_id="M-1")
+    loop = InstrumentationLoopFunction(dex_id="ILF-1")
+    assert model.add_instrumentation_loop_function(loop) is model
+    assert loop in model.instrumentation_loop_functions
+
+
+def test_pif_referenced_by_loop_can_also_be_top_level():
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    loop = InstrumentationLoopFunction(
+        dex_id="ILF-1", process_instrumentation_functions=[pif],
+    )
+    model = ConceptualModel(
+        dex_id="M-1",
+        process_instrumentation_functions=[pif],
+        instrumentation_loop_functions=[loop],
+    )
+    assert model.process_instrumentation_functions[0] is pif
+    assert model.instrumentation_loop_functions[0].process_instrumentation_functions[0] is pif
