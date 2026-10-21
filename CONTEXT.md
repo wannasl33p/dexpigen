@@ -32,6 +32,10 @@ _Avoid_: ActuatingSystemComponent as a DEXPI class (that is a Proteus element fa
 The DEXPI 1.3 loop function for a control valve. A `SignalConveyingFunction` attaches here via `Source`/`Target`, not to `ActuatingSystem`.
 _Avoid_: attaching a signal directly to ActuatingSystem or ControlledActuator
 
+**InstrumentationLoopFunction**:
+The DEXPI 1.3 class for an identified collection of related `ProcessInstrumentationFunction` objects. It references the PIFs via `is a collection including` / `is a part of`; it does not own them.
+_Avoid_: treating the loop as the PIF's composition parent; a `TagName` on the loop (it is not a `TaggedPlantItem`)
+
 **PipingNetworkSystem**:
 The DEXPI line object. It composes `PipingNetworkSegment` objects. `lineNumber` is optional and not unique in the model.
 _Avoid_: MainProcessLine as a DEXPI class; 1:1 lineNumber uniqueness as a model rule
@@ -48,6 +52,10 @@ _Avoid_: treating a segment as the whole line; using lineNumber as the segment i
 A segment item (`FlowInPipeOffPageConnector` or `FlowOutPipeOffPageConnector`) that may sit in `items` while `sourceItem`/`targetItem` reference it or an external nozzle.
 _Avoid_: a connector bag on the system; OPC as only an endpoint with no item
 
+**ComponentName**:
+An optional Proteus attribute on any plant item (`ComponentType`/`Revision`/`Status` are its siblings). It is a wire-format attribute, not a DEXPI data field.
+_Avoid_: conflating `ComponentName` with the DEXPI field `PipingComponentName`; reading `ComponentName` as a DEXPI attribute
+
 **SignalLine**:
 An extraction-time signal connection. In DEXPI 1.3 it maps to `SignalConveyingFunction` (a concrete class), which references `ProcessInstrumentationFunction` or `ActuatingFunction` via `Source`/`Target`. The signal-vs-measuring distinction (`SignalLineFunction` vs `MeasuringLineFunction`) is not extracted.
 _Avoid_: piping class for signals; a DEXPI class named SignalLine; instantiating `SignalLineFunction`/`MeasuringLineFunction` in v0.1; asserting signal vs measuring
@@ -59,6 +67,18 @@ _Avoid_: Instrument as a DEXPI class name; Transmitter/PrimaryElement as v0.1 cl
 **ProcessControlFunction**:
 A DEXPI 1.3 subtype of `ProcessInstrumentationFunction` for a control/safeguarding system bubble (`ComponentClass` `ProcessControlFunction`). It is a function, not `Equipment`, even when extraction labels it "equipment".
 _Avoid_: control/safeguarding system as Equipment
+
+**ProcessSignalGeneratingFunction**:
+The DEXPI 1.3 function that anchors an instrument to the process it measures. It is composed under a `ProcessInstrumentationFunction` and references its `SensingLocation` via `is located in`.
+_Avoid_: attaching `is located in` directly to a `ProcessInstrumentationFunction`; modelling it as a top-level object
+
+**SensingLocation**:
+The abstract DEXPI 1.3 role played by a `Nozzle`, `PipingComponent`, or `PipingNetworkSegment` that a `ProcessSignalGeneratingFunction` measures.
+_Avoid_: a `SensingLocation` object in the graph; an `Equipment` or `Chamber` as a sensing location
+
+**MeasuringElement**:
+An ISO 15926 term that appears in DEXPI prose only. DEXPI models it as the `InlinePrimaryElement` family (e.g. `FlowMeasuringElement`).
+_Avoid_: `MeasuringElement` as a DEXPI class name
 
 **Entity**:
 An extraction-time object from the ML pipeline, with attributes and a graph id. Outside this library’s v0.1 API.
