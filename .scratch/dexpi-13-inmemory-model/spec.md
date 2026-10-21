@@ -57,7 +57,7 @@ A MIT-licensed Python 3.13 / Pydantic v2 library that holds the DEXPI 1.3 concep
 
 **Composition vs reference.** Composition is a nested Python object owned by its parent (e.g. `equipment.nozzles: list[Nozzle]`, `actuating_system.controlled_actuator`). A reference holds the same Python object in another field (e.g. `operated_valve_reference.valve: OperatedValve | None`) and never clones or re-parents it.
 
-**Instrumentation.** `ProcessInstrumentationFunction` is the bubble; its tag is first-class (number, category, modifier, functions) and all other DEXPI fields go into a generic attribute bag. `ProcessControlFunction` is a subtype for control/safeguarding system bubbles. `ActuatingSystem` composes `ControlledActuator`, `OperatedValveReference`, and optional `Positioner`; `ActuatingFunction` references the system and its segment. `SignalConveyingFunction` is the dashed signal line, with `0..1` `Source`/`Target` references restricted to functions.
+**Instrumentation.** `ProcessInstrumentationFunction` is the bubble; its tag is first-class (number, category, modifier, functions) and all other DEXPI fields go into a generic attribute bag. `ProcessControlFunction` is a subtype for control/safeguarding system bubbles. `ActuatingSystem` composes `ControlledActuator`, `OperatedValveReference`, and optional `Positioner`; `ActuatingFunction` references the system and its segment. `SignalConveyingFunction` is the dashed signal line, with `0..1` `Source`/`Target` references restricted to functions. `ProcessSignalGeneratingFunction` is composed under its PIF and references its `0..1` `SensingLocation` (a nozzle, a segment, or a `FlowMeasuringElement`); `InstrumentationLoopFunction` references the PIFs it collects without owning them.
 
 **Optionality.** Every DEXPI data field is optional (`0..1` / `*`); the only required fields are the project-level `id` and `dex_id`. No field the spec leaves at multiplicity zero is made mandatory.
 
@@ -79,8 +79,8 @@ A MIT-licensed Python 3.13 / Pydantic v2 library that holds the DEXPI 1.3 concep
 - Graphics, coordinates, and the ShapeCatalogue.
 - Using this library as a CAE import/export product.
 - pyDEXPI as a dependency or a source of classes (architectural reference only).
-- Sensing/device layer: `Transmitter`, `PrimaryElement`, `MeasuringElement`, `FlowDetector`, `ProcessSignalGeneratingFunction`, and the instrument↔process connection it would represent.
-- Loop functions beyond `ActuatingFunction`: `ActuatingElectricalFunction`, `InstrumentationLoopFunction`.
+- Sensing/device layer beyond the `SensingLocation` subset: `Transmitter`, `PrimaryElement`, `MeasuringElement`, `FlowDetector`.
+- Loop functions beyond `ActuatingFunction` and `InstrumentationLoopFunction`: `ActuatingElectricalFunction`.
 - The `SignalLineFunction` vs `MeasuringLineFunction` distinction (collapse to `SignalConveyingFunction`).
 - `FlameArrestor` / `RuptureDisc`.
 - Per-level `Custom*` equipment leaves and un-named deep equipment leaves.

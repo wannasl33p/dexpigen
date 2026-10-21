@@ -67,6 +67,8 @@ The sensing layer comes out of the out-of-scope list during implementation (`spe
 
 ## Comments
 
+- **Amended 2026-10-21 (implementation):** the `_emit_pif` child order above ("matches I01") was revised to match the C01 golden: generic attributes → signal associations (`is logical start of` / `is logical end of`) → `is a part of` → `InformationFlow` → `ActuatingFunction` → PSGF. I01 and C01 disagree on this order, and the XSD allows any (`xsd:choice maxOccurs="unbounded"`); C01 is the project's acceptance fixture.
+
 - **Ticket-question correction:** DEXPI has **no** `MeasuringElement` class. It is an ISO 15926 term used in spec prose only; DEXPI models that concept as the `InlinePrimaryElement` family (spec:35863, 36358-36407).
 - The device layer is real in the spec (spec:47020-47276, 45770-45820, 48130-48181) but is used by **zero** of the 22 PSGF instances in `data/example_pids/`.
 - There is no direct association from a `ProcessInstrumentationFunction` to a piping element; the physical anchoring always travels through the nested PSGF (spec:46887-46898, research/06 §2.3).
