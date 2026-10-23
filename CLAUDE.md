@@ -17,5 +17,5 @@ DEXPI 1.3 in-memory model — a Python library that holds a DEXPI P&ID 1.3 conce
 - **Python** — target **3.13** (`requires-python = ">=3.13"`).
 - **Typing** — modern typing only: `X | None` (not `typing.Optional`), builtin generics `list[...]` / `dict[...]` / `tuple[...]` (not `typing.List`), and `typing.Self` where appropriate. Pydantic v2.
 - **Language** — all comments and docstrings in **English**.
-- **Docs sync** — a change to the public API or to an error message updates README/recipes/pitfalls in the same commit. Regenerate the class index with `uv run python scripts/gen_reference.py`.
+- **Docs sync** — a change to the public API or to an error message updates README/recipes/pitfalls in the same commit. `tests/test_docs.py` checks their links, paths, backticked names, pitfall error texts and test ids, size budgets and the README example; regenerate the class index with `uv run python scripts/gen_reference.py`.
 - **Serialization validation** — after generating any Proteus XML, validate it against the bundled XSD `data/schemas/ProteusPIDSchema 4.1.1.xsd` with `xmllint --noout --schema <xsd> <xml>` (see `examples/validate_dexpi.py`). Generated output must be schema-valid before it is considered done.
