@@ -13,6 +13,7 @@ The decided shape of an **agent-facing documentation set** for dexpigen: entry p
 - Docs describe the code after v0.2 is implemented and the review defects are fixed; both are done by a separate implementation subagent, outside this map.
 - Fact to carry: the library currently **only writes** Proteus XML (`spec.md`: "the library itself only writes"). A reader/parser is wanted but not designed.
 - Skills: `domain-modeling`, `grilling` for HITL tickets; `research` for external conventions.
+- Handoff: [handoff.md](handoff.md) sequences the resolved decisions into work packages for the implementation agent.
 - Acceptance idea (Q7): a fresh agent session, with only docs + code, reproduces `examples/C01` (or part of it) and passes `examples/validate_dexpi.py`.
 
 ## Decisions so far
