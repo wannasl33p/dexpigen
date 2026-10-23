@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Self
+from typing import Annotated, Self
 
 from pydantic import Field
 
-from dexpigen.base import DexpiBaseModel
+from dexpigen.base import Composed, DexpiBaseModel
 from dexpigen.equipment import Equipment
 from dexpigen.instrumentation import (
     ActuatingSystem,
@@ -23,15 +23,19 @@ class ConceptualModel(DexpiBaseModel):
     they are composed under their owning ``ProcessInstrumentationFunction``.
     """
 
-    equipment: list[Equipment] = Field(default_factory=list)
-    piping_network_systems: list[PipingNetworkSystem] = Field(default_factory=list)
-    process_instrumentation_functions: list[ProcessInstrumentationFunction] = Field(
+    equipment: Annotated[list[Equipment], Composed] = Field(default_factory=list)
+    piping_network_systems: Annotated[list[PipingNetworkSystem], Composed] = Field(
         default_factory=list
     )
-    actuating_systems: list[ActuatingSystem] = Field(default_factory=list)
-    instrumentation_loop_functions: list[InstrumentationLoopFunction] = Field(
+    process_instrumentation_functions: Annotated[
+        list[ProcessInstrumentationFunction], Composed
+    ] = Field(default_factory=list)
+    actuating_systems: Annotated[list[ActuatingSystem], Composed] = Field(
         default_factory=list
     )
+    instrumentation_loop_functions: Annotated[
+        list[InstrumentationLoopFunction], Composed
+    ] = Field(default_factory=list)
 
     def add_equipment(self, item: Equipment) -> Self:
         """Aggregate ``item`` at the top level of this model."""

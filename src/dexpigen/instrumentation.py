@@ -12,11 +12,11 @@ whose ``source``/``target`` reference functions only, via the abstract
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Self
 
 from pydantic import Field, PrivateAttr, model_validator
 
-from dexpigen.base import CustomAttribute, DexpiBaseModel
+from dexpigen.base import Composed, CustomAttribute, DexpiBaseModel, Ref
 from dexpigen.enumerations import FailActionClassification
 from dexpigen.piping import OperatedValve, PipingNetworkSegment, SensingLocation
 
@@ -50,7 +50,7 @@ class ProcessSignalGeneratingFunction(SignalConveyingFunctionSource):
 
     process_signal_generating_function_number: str | None = None
     sensor_type: str | None = None
-    sensing_location: SensingLocation | None = None
+    sensing_location: Annotated[SensingLocation | None, Ref] = None
 
     _owner: ProcessInstrumentationFunction | None = PrivateAttr(default=None)
 
@@ -74,13 +74,15 @@ class ProcessInstrumentationFunction(
     process_instrumentation_function_modifier: str | None = None
     process_instrumentation_functions_code: str | None = None
 
-    actuating_functions: list[ActuatingFunction] = Field(default_factory=list)
-    signal_conveying_functions: list[SignalConveyingFunction] = Field(
+    actuating_functions: Annotated[list[ActuatingFunction], Composed] = Field(
         default_factory=list
     )
-    process_signal_generating_functions: list[ProcessSignalGeneratingFunction] = Field(
-        default_factory=list
+    signal_conveying_functions: Annotated[list[SignalConveyingFunction], Composed] = (
+        Field(default_factory=list)
     )
+    process_signal_generating_functions: Annotated[
+        list[ProcessSignalGeneratingFunction], Composed
+    ] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -181,9 +183,9 @@ class InstrumentationLoopFunction(DexpiBaseModel):
     component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/InstrumentationLoopFunction"
 
     instrumentation_loop_function_number: str | None = None
-    process_instrumentation_functions: list[ProcessInstrumentationFunction] = Field(
-        default_factory=list
-    )
+    process_instrumentation_functions: Annotated[
+        list[ProcessInstrumentationFunction], Ref
+    ] = Field(default_factory=list)
 
 
 class ControlledActuator(DexpiBaseModel):
@@ -204,7 +206,7 @@ class OperatedValveReference(DexpiBaseModel):
     component_class: ClassVar[str] = "OperatedValveReference"
     component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/OperatedValveReference"
 
-    valve: OperatedValve | None = None
+    valve: Annotated[OperatedValve | None, Ref] = None
     sub_tag_name: str | None = None
 
     _owner: ActuatingSystem | None = PrivateAttr(default=None)
@@ -229,9 +231,9 @@ class ActuatingSystem(DexpiBaseModel):
     actuating_system_number: str | None = None
     typical_information: str | None = None
 
-    controlled_actuator: ControlledActuator | None = None
-    operated_valve_reference: OperatedValveReference | None = None
-    positioner: Positioner | None = None
+    controlled_actuator: Annotated[ControlledActuator | None, Composed] = None
+    operated_valve_reference: Annotated[OperatedValveReference | None, Composed] = None
+    positioner: Annotated[Positioner | None, Composed] = None
 
     @model_validator(mode="after")
     def _bind_children(self) -> Self:
@@ -284,8 +286,8 @@ class ActuatingFunction(
 
     actuating_function_number: str | None = None
 
-    systems: ActuatingSystem | None = None
-    actuating_location: PipingNetworkSegment | None = None
+    systems: Annotated[ActuatingSystem | None, Ref] = None
+    actuating_location: Annotated[PipingNetworkSegment | None, Ref] = None
 
     _owner: ProcessInstrumentationFunction | None = PrivateAttr(default=None)
 
@@ -295,8 +297,8 @@ class SignalConveyingFunction(DexpiBaseModel):
     component_class: ClassVar[str] = "SignalConveyingFunction"
     component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/SignalConveyingFunction"
 
-    source: SignalConveyingFunctionSource | None = None
-    target: SignalConveyingFunctionTarget | None = None
+    source: Annotated[SignalConveyingFunctionSource | None, Ref] = None
+    target: Annotated[SignalConveyingFunctionTarget | None, Ref] = None
 
     _owner: ProcessInstrumentationFunction | None = PrivateAttr(default=None)
 

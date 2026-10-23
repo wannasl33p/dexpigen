@@ -3,11 +3,11 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, Self
+from typing import Annotated, ClassVar, Self
 
 from pydantic import Field, PrivateAttr, model_validator
 
-from dexpigen.base import DexpiBaseModel
+from dexpigen.base import Composed, DexpiBaseModel, Ref
 from dexpigen.piping import PipingSourceItem, PipingTargetItem, SensingLocation
 
 
@@ -39,7 +39,7 @@ class Nozzle(PipingSourceItem, PipingTargetItem, SensingLocation):
     component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS415214"
 
     sub_tag_name: str | None = None
-    chamber: Chamber | None = None
+    chamber: Annotated[Chamber | None, Ref] = None
 
     _owner: Equipment | None = PrivateAttr(default=None)
 
@@ -55,8 +55,8 @@ class Equipment(DexpiBaseModel):
     tag_name_suffix: str | None = None
     equipment_description: str | None = None
 
-    nozzles: list[Nozzle] = Field(default_factory=list)
-    drying_chambers: list[Chamber] = Field(default_factory=list)
+    nozzles: Annotated[list[Nozzle], Composed] = Field(default_factory=list)
+    drying_chambers: Annotated[list[Chamber], Composed] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _bind_owned_children(self) -> Self:

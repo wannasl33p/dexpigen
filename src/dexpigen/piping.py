@@ -10,11 +10,11 @@ carries the DEXPI endpoint-subtype restriction.
 
 from __future__ import annotations
 
-from typing import ClassVar, Self
+from typing import Annotated, ClassVar, Self
 
 from pydantic import Field, PrivateAttr, model_validator
 
-from dexpigen.base import DexpiBaseModel
+from dexpigen.base import Composed, DexpiBaseModel, Ref
 from dexpigen.enumerations import (
     OnHoldClassification,
     PipingClassArtefactClassification,
@@ -32,7 +32,7 @@ class PipingNodeOwner(DexpiBaseModel):
 
     _abstract: ClassVar[bool] = True
 
-    nodes: list[PipingNode] = Field(default_factory=list)
+    nodes: Annotated[list[PipingNode], Composed] = Field(default_factory=list)
     # 1-based indices into ``nodes`` naming the flow-in / flow-out ports
     # (serialized as ConnectionPoints FlowIn/FlowOut). ``None`` = not declared.
     flow_in_index: int | None = None
@@ -81,10 +81,10 @@ class PipingConnection(DexpiBaseModel):
 
     _abstract: ClassVar[bool] = True
 
-    source_item: PipingSourceItem | None = None
-    source_node: PipingNode | None = None
-    target_item: PipingTargetItem | None = None
-    target_node: PipingNode | None = None
+    source_item: Annotated[PipingSourceItem | None, Ref] = None
+    source_node: Annotated[PipingNode | None, Ref] = None
+    target_item: Annotated[PipingTargetItem | None, Ref] = None
+    target_node: Annotated[PipingNode | None, Ref] = None
 
     _owner: PipingNetworkSegment | None = PrivateAttr(default=None)
 
@@ -206,7 +206,7 @@ class PipeOffPageConnector(PipingNetworkSegmentItem, PipingNodeOwner):
 
     _abstract: ClassVar[bool] = True
 
-    connector_reference: PipeOffPageConnectorReference | None = None
+    connector_reference: Annotated[PipeOffPageConnectorReference | None, Composed] = None
 
     @model_validator(mode="after")
     def _bind_connector_reference(self) -> Self:
@@ -254,7 +254,7 @@ class PipeOffPageConnectorObjectReference(PipeOffPageConnectorReference):
     component_class: ClassVar[str] = "PipeOffPageConnectorObjectReference"
     component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/PipeOffPageConnectorObjectReference"
 
-    referenced_connector: PipeOffPageConnector | None = None
+    referenced_connector: Annotated[PipeOffPageConnector | None, Ref] = None
 
 
 class PipeOffPageConnectorReferenceByNumber(PipeOffPageConnectorReference):
@@ -275,8 +275,8 @@ class PipingNetworkSegment(SensingLocation):
     fluid_code: str | None = None
     piping_class_code: str | None = None
 
-    items: list[PipingNetworkSegmentItem] = Field(default_factory=list)
-    connections: list[PipingConnection] = Field(default_factory=list)
+    items: Annotated[list[PipingNetworkSegmentItem], Composed] = Field(default_factory=list)
+    connections: Annotated[list[PipingConnection], Composed] = Field(default_factory=list)
 
     _owner: PipingNetworkSystem | None = PrivateAttr(default=None)
 
@@ -322,7 +322,7 @@ class PipingNetworkSystem(DexpiBaseModel):
     fluid_code: str | None = None
     piping_class_code: str | None = None
 
-    segments: list[PipingNetworkSegment] = Field(default_factory=list)
+    segments: Annotated[list[PipingNetworkSegment], Composed] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _bind_segments(self) -> Self:
