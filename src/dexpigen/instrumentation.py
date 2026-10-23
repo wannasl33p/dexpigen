@@ -63,7 +63,9 @@ class ProcessInstrumentationFunction(
     The instrument tag is first-class (number, category, modifier, additional
     functions); every other DEXPI field lives in the generic ``custom_attributes``
     bag. It composes the ``ActuatingFunction`` and ``SignalConveyingFunction``
-    objects that realise this function.
+    objects that realise this function, the ``ProcessSignalGeneratingFunction``
+    objects that anchor it to the process, and its ``SignalOffPageConnector``
+    objects (DEXPI ``SignalConnectors``).
     """
 
     component_class: ClassVar[str] = "ProcessInstrumentationFunction"
@@ -83,6 +85,9 @@ class ProcessInstrumentationFunction(
     process_signal_generating_functions: Annotated[
         list[ProcessSignalGeneratingFunction], Composed
     ] = Field(default_factory=list)
+    signal_connectors: Annotated[list[SignalOffPageConnector], Composed] = Field(
+        default_factory=list
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -105,6 +110,7 @@ class ProcessInstrumentationFunction(
             self.actuating_functions,
             self.signal_conveying_functions,
             self.process_signal_generating_functions,
+            self.signal_connectors,
         ):
             if len({id(function) for function in functions}) != len(functions):
                 raise ValueError(_ALREADY_COMPOSED_MESSAGE)
@@ -114,13 +120,16 @@ class ProcessInstrumentationFunction(
             self._adopt_function(function)
         for function in self.process_signal_generating_functions:
             self._adopt_function(function)
+        for connector in self.signal_connectors:
+            self._adopt_function(connector)
         return self
 
     def _adopt_function(
         self,
         function: ActuatingFunction
         | SignalConveyingFunction
-        | ProcessSignalGeneratingFunction,
+        | ProcessSignalGeneratingFunction
+        | SignalOffPageConnector,
     ) -> None:
         owner = function._owner
         if owner is not None and owner is not self:
@@ -133,7 +142,8 @@ class ProcessInstrumentationFunction(
         self,
         function: ActuatingFunction
         | SignalConveyingFunction
-        | ProcessSignalGeneratingFunction,
+        | ProcessSignalGeneratingFunction
+        | SignalOffPageConnector,
     ) -> None:
         # Re-composing would append the same object twice, giving two elements
         # with one ``ID`` (schema-invalid XML).
@@ -163,6 +173,13 @@ class ProcessInstrumentationFunction(
         self._reject_recomposition(function)
         self._adopt_function(function)
         self.process_signal_generating_functions.append(function)
+        return self
+
+    def add_signal_connector(self, connector: SignalOffPageConnector) -> Self:
+        """Compose ``connector`` under this bubble, enforcing single ownership."""
+        self._reject_recomposition(connector)
+        self._adopt_function(connector)
+        self.signal_connectors.append(connector)
         return self
 
 
@@ -304,9 +321,16 @@ class SignalConveyingFunction(DexpiBaseModel):
 
 
 class SignalOffPageConnector(DexpiBaseModel):
-    """Abstract base for a signal off-page connector."""
+    """Abstract base for a signal off-page connector.
+
+    It is composed under a ``ProcessInstrumentationFunction``
+    (``signal_connectors``) and written as a Proteus ``<SignalOffPageConnector>``
+    inside that bubble.
+    """
 
     _abstract: ClassVar[bool] = True
+
+    _owner: ProcessInstrumentationFunction | None = PrivateAttr(default=None)
 
 
 class FlowInSignalOffPageConnector(

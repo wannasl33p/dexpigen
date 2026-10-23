@@ -75,8 +75,8 @@ Error texts below are message fragments. Errors raised inside a constructor arri
 ## Compose signals, actuating functions and sensors under a PIF
 
 - **Symptom:** The object is missing from the XML: `ConceptualModel` has no field for `SignalConveyingFunction`, `ActuatingFunction` or `ProcessSignalGeneratingFunction`, and an unknown constructor keyword is silently ignored.
-- **Why:** DEXPI 1.3: these functions are composed by their `ProcessInstrumentationFunction`.
-- **Fix:** `add_signal_conveying_function`, `add_actuating_function`, `add_process_signal_generating_function` on the PIF; add the PIF at the top level.
+- **Why:** DEXPI 1.3: these functions, and the signal off-page connectors (`FlowInSignalOffPageConnector`, `FlowOutSignalOffPageConnector`), are composed by their `ProcessInstrumentationFunction`.
+- **Fix:** `add_signal_conveying_function`, `add_actuating_function`, `add_process_signal_generating_function`, `add_signal_connector` on the PIF; add the PIF at the top level.
 - **Enforced by:** not enforced
 
 ## Add the PIFs of a loop at the top level too

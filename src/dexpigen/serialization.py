@@ -32,6 +32,8 @@ from dexpigen.instrumentation import (
     ProcessSignalGeneratingFunction,
     SignalConveyingFunction,
     SignalConveyingFunctionSource,
+    SignalConveyingFunctionTarget,
+    SignalOffPageConnector,
 )
 from dexpigen.model import ConceptualModel
 from dexpigen.piping import (
@@ -434,11 +436,11 @@ def _signals_starting_at(source: SignalConveyingFunctionSource) -> list[str]:
     return out
 
 
-def _signals_ending_at(pif: ProcessInstrumentationFunction) -> list[str]:
+def _signals_ending_at(target: SignalConveyingFunctionTarget) -> list[str]:
     out: list[str] = []
     for owner in _MODEL.process_instrumentation_functions:  # type: ignore[union-attr]
         for signal in owner.signal_conveying_functions:
-            if signal.target is pif:
+            if signal.target is target:
                 out.append(signal.dex_id)
     return out
 
@@ -646,7 +648,8 @@ def _emit_pif(w: _Writer, pif: ProcessInstrumentationFunction) -> None:
     w.open("ProcessInstrumentationFunction", _item_attrs(pif, pif.component_class))
     _emit_generic_attributes(w, pif)
     # Child order follows the C01 reference (the XSD allows any order):
-    # signal associations, loop associations, InformationFlow, ActuatingFunction, PSGF.
+    # signal associations, loop associations, InformationFlow, ActuatingFunction, PSGF,
+    # then the signal off-page connectors (not in C01).
     # Signals may be composed under any PIF, so both ends scan the whole model.
     for signal_id in _signals_starting_at(pif):
         w.leaf("Association", _attrs(Type="is logical start of", ItemID=signal_id))
@@ -660,7 +663,23 @@ def _emit_pif(w: _Writer, pif: ProcessInstrumentationFunction) -> None:
         _emit_actuating_function(w, function)
     for psgf in pif.process_signal_generating_functions:
         _emit_psgf(w, psgf)
+    for connector in pif.signal_connectors:
+        _emit_signal_connector(w, connector)
     w.close("ProcessInstrumentationFunction")
+
+
+def _emit_signal_connector(w: _Writer, connector: SignalOffPageConnector) -> None:
+    # The DEXPI 1.3 text names the tag <InformationFlowOffPageConnector>, but the
+    # bundled Proteus 4.1.1 XSD only accepts <SignalOffPageConnector> here.
+    w.open("SignalOffPageConnector", _item_attrs(connector, connector.component_class))
+    _emit_generic_attributes(w, connector)
+    if isinstance(connector, SignalConveyingFunctionSource):
+        for signal_id in _signals_starting_at(connector):
+            w.leaf("Association", _attrs(Type="is logical start of", ItemID=signal_id))
+    if isinstance(connector, SignalConveyingFunctionTarget):
+        for signal_id in _signals_ending_at(connector):
+            w.leaf("Association", _attrs(Type="is logical end of", ItemID=signal_id))
+    w.close("SignalOffPageConnector")
 
 
 def _emit_psgf(w: _Writer, psgf: ProcessSignalGeneratingFunction) -> None:

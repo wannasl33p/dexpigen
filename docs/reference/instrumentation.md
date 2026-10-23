@@ -68,6 +68,7 @@ The P&ID instrument/function bubble.
 | `actuating_functions` | list[[ActuatingFunction](#actuatingfunction)] | `[]` | composed |
 | `signal_conveying_functions` | list[[SignalConveyingFunction](#signalconveyingfunction)] | `[]` | composed |
 | `process_signal_generating_functions` | list[[ProcessSignalGeneratingFunction](#processsignalgeneratingfunction)] | `[]` | composed |
+| `signal_connectors` | list[[SignalOffPageConnector](#signaloffpageconnector)] | `[]` | composed |
 
 ### ProcessControlFunction
 

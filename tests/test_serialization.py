@@ -622,3 +622,40 @@ def test_object_reference_serialized_xml_validates_against_xsd(tmp_path):
     path = tmp_path / "opc_object_reference.xml"
     path.write_text(to_proteus_xml(_object_reference_model()), encoding="utf-8")
     assert proteus_is_valid(str(path))
+
+
+def _signal_connector_model() -> ConceptualModel:
+    from dexpigen.instrumentation import (  # noqa: PLC0415
+        FlowInSignalOffPageConnector,
+        FlowOutSignalOffPageConnector,
+    )
+
+    incoming = FlowInSignalOffPageConnector(dex_id="SOPC-IN")
+    outgoing = FlowOutSignalOffPageConnector(dex_id="SOPC-OUT")
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    pif.add_signal_connector(incoming)
+    pif.add_signal_connector(outgoing)
+    pif.add_signal_conveying_function(
+        SignalConveyingFunction(dex_id="SIG-IN", source=incoming, target=pif)
+    )
+    pif.add_signal_conveying_function(
+        SignalConveyingFunction(dex_id="SIG-OUT", source=pif, target=outgoing)
+    )
+    return ConceptualModel(dex_id="MODEL-1").add_process_instrumentation_function(pif)
+
+
+def test_signal_connector_is_a_signal_off_page_connector_in_its_pif():
+    root = ET.fromstring(to_proteus_xml(_signal_connector_model()))
+    pif = _find_by_id(root, "PIF-1")
+    children = [c for c in pif if c.tag == "SignalOffPageConnector"]
+    assert [c.get("ID") for c in children] == ["SOPC-IN", "SOPC-OUT"]
+    assert children[0].get("ComponentClass") == "FlowInSignalOffPageConnector"
+    assert ("is logical start of", "SIG-IN") in _assocs(children[0])
+    assert ("is logical end of", "SIG-OUT") in _assocs(children[1])
+
+
+@pytest.mark.skipif(shutil.which("xmllint") is None, reason="xmllint is not on PATH")
+def test_signal_connector_serialized_xml_validates_against_xsd(tmp_path):
+    path = tmp_path / "signal_connector.xml"
+    path.write_text(to_proteus_xml(_signal_connector_model()), encoding="utf-8")
+    assert proteus_is_valid(str(path))

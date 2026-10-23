@@ -475,3 +475,33 @@ def test_same_function_in_constructor_list_is_not_bound_twice():
     with pytest.raises(ValueError, match="already composed under this"):
         pif.add_process_signal_generating_function(psgf)
     assert pif.process_signal_generating_functions == [psgf]
+
+
+# --- signal off-page connectors composed under a PIF (DEXPI 1.3 9.22.16) ---
+
+def test_pif_composes_signal_connectors():
+    connector = FlowInSignalOffPageConnector(dex_id="SOPC-1")
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1")
+    pif.add_signal_connector(connector)
+    assert pif.signal_connectors == [connector]
+    assert connector._owner is pif
+
+
+def test_pif_composes_signal_connectors_via_constructor():
+    connector = FlowOutSignalOffPageConnector(dex_id="SOPC-1")
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1", signal_connectors=[connector])
+    assert connector._owner is pif
+
+
+def test_signal_connector_cannot_have_two_owners():
+    connector = FlowInSignalOffPageConnector(dex_id="SOPC-1")
+    ProcessInstrumentationFunction(dex_id="PIF-1").add_signal_connector(connector)
+    with pytest.raises(ValueError, match="already owned"):
+        ProcessInstrumentationFunction(dex_id="PIF-2").add_signal_connector(connector)
+
+
+def test_signal_connector_same_owner_readd_is_rejected():
+    connector = FlowInSignalOffPageConnector(dex_id="SOPC-1")
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1").add_signal_connector(connector)
+    with pytest.raises(ValueError, match="already composed"):
+        pif.add_signal_connector(connector)
