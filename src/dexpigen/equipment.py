@@ -7,8 +7,17 @@ from typing import Annotated, ClassVar, Self
 
 from pydantic import Field, PrivateAttr, model_validator
 
-from dexpigen.base import Composed, DexpiBaseModel, Ref
+from dexpigen.base import (
+    Composed,
+    DexpiBaseModel,
+    Ref,
+    reject_duplicates,
+    reject_recomposition,
+)
 from dexpigen.piping import PipingSourceItem, PipingTargetItem, SensingLocation
+
+_NOZZLE_ALREADY_COMPOSED = "nozzle is already composed under this equipment"
+_CHAMBER_ALREADY_COMPOSED = "chamber is already composed under this equipment"
 
 
 class Chamber(DexpiBaseModel):
@@ -65,6 +74,8 @@ class Equipment(DexpiBaseModel):
         Keeps the constructor (``Pump(dex_id=..., nozzles=[...])``) on the same
         ownership rules as the aggregate methods below.
         """
+        reject_duplicates(self.drying_chambers, _CHAMBER_ALREADY_COMPOSED)
+        reject_duplicates(self.nozzles, _NOZZLE_ALREADY_COMPOSED)
         for chamber in self.drying_chambers:
             self._adopt_chamber(chamber)
         for nozzle in self.nozzles:
@@ -73,12 +84,14 @@ class Equipment(DexpiBaseModel):
 
     def add_nozzle(self, nozzle: Nozzle) -> Self:
         """Compose ``nozzle`` under this equipment, enforcing single ownership."""
+        reject_recomposition(nozzle, self.nozzles, _NOZZLE_ALREADY_COMPOSED)
         self._adopt_nozzle(nozzle)
         self.nozzles.append(nozzle)
         return self
 
     def add_drying_chamber(self, chamber: Chamber) -> Self:
         """Compose ``chamber`` under this equipment, enforcing single ownership."""
+        reject_recomposition(chamber, self.drying_chambers, _CHAMBER_ALREADY_COMPOSED)
         self._adopt_chamber(chamber)
         self.drying_chambers.append(chamber)
         return self

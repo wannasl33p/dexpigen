@@ -512,3 +512,42 @@ def test_psgf_nozzle_and_segment_serialized_xml_validates_against_xsd(tmp_path):
     path = tmp_path / "sensing.xml"
     path.write_text(to_proteus_xml(model), encoding="utf-8")
     assert proteus_is_valid(str(path))
+
+
+# --- PipeOffPageConnectorReferenceByNumber fields ---
+
+def _opc_model(**reference_kwargs) -> ConceptualModel:
+    from dexpigen.piping import (  # noqa: PLC0415
+        FlowInPipeOffPageConnector,
+        PipeOffPageConnectorReferenceByNumber,
+    )
+
+    connector = FlowInPipeOffPageConnector(dex_id="OPC-1")
+    connector.add_connector_reference(
+        PipeOffPageConnectorReferenceByNumber(dex_id="OPCREF-1", **reference_kwargs)
+    )
+    segment = PipingNetworkSegment(dex_id="SEG-1")
+    segment.add_item(connector)
+    line = PipingNetworkSystem(dex_id="LINE-1")
+    line.add_segment(segment)
+    return ConceptualModel(dex_id="MODEL-1").add_piping_network_system(line)
+
+
+def test_reference_by_number_fields_are_serialized():
+    model = _opc_model(referenced_connector_number="123", referenced_drawing_number="D-2")
+    element = _find_by_id(ET.fromstring(to_proteus_xml(model)), "OPCREF-1")
+    assert element.tag == "PipeOffPageConnectorReference"
+    names = [a.get("Name") for a in element.iter("GenericAttribute")]
+    assert names == [
+        "ReferencedConnectorNumberAssignmentClass",
+        "ReferencedDrawingNumberAssignmentClass",
+    ]
+    values = [a.get("Value") for a in element.iter("GenericAttribute")]
+    assert values == ["123", "D-2"]
+
+
+@pytest.mark.skipif(shutil.which("xmllint") is None, reason="xmllint is not on PATH")
+def test_reference_by_number_serialized_xml_validates_against_xsd(tmp_path):
+    path = tmp_path / "opc.xml"
+    path.write_text(to_proteus_xml(_opc_model(referenced_connector_number="123")), encoding="utf-8")
+    assert proteus_is_valid(str(path))

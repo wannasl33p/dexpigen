@@ -34,6 +34,22 @@ Composed: Final = Relation("Composed")
 Ref: Final = Relation("Ref")
 
 
+def reject_duplicates(children: list[Any], message: str) -> None:
+    """Raise ``ValueError(message)`` if ``children`` holds one object twice.
+
+    Composition lists compare by identity: the same object listed twice would
+    serialize as two elements with one ``ID``.
+    """
+    if len({id(child) for child in children}) != len(children):
+        raise ValueError(message)
+
+
+def reject_recomposition(child: Any, children: list[Any], message: str) -> None:
+    """Raise ``ValueError(message)`` if ``child`` is already in ``children``."""
+    if any(existing is child for existing in children):
+        raise ValueError(message)
+
+
 def relation_of(metadata: list[Any]) -> Relation | None:
     """Return the ``Composed``/``Ref`` marker in a field's metadata, if any."""
     for item in metadata:

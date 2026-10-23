@@ -14,11 +14,22 @@ from typing import Annotated, ClassVar, Self
 
 from pydantic import Field, PrivateAttr, model_validator
 
-from dexpigen.base import Composed, DexpiBaseModel, Ref
+from dexpigen.base import (
+    Composed,
+    DexpiBaseModel,
+    Ref,
+    reject_duplicates,
+    reject_recomposition,
+)
 from dexpigen.enumerations import (
     OnHoldClassification,
     PipingClassArtefactClassification,
 )
+
+_NODE_ALREADY_COMPOSED = "node is already composed under this owner"
+_ITEM_ALREADY_COMPOSED = "item is already composed under this segment"
+_CONNECTION_ALREADY_COMPOSED = "connection is already composed under this segment"
+_SEGMENT_ALREADY_COMPOSED = "segment is already composed under this system"
 
 
 class PipingNode(DexpiBaseModel):
@@ -40,12 +51,14 @@ class PipingNodeOwner(DexpiBaseModel):
 
     @model_validator(mode="after")
     def _bind_nodes(self) -> Self:
+        reject_duplicates(self.nodes, _NODE_ALREADY_COMPOSED)
         for node in self.nodes:
             self._adopt_node(node)
         return self
 
     def add_node(self, node: PipingNode) -> Self:
         """Compose ``node`` under this owner, enforcing single ownership."""
+        reject_recomposition(node, self.nodes, _NODE_ALREADY_COMPOSED)
         self._adopt_node(node)
         self.nodes.append(node)
         return self
@@ -282,6 +295,8 @@ class PipingNetworkSegment(SensingLocation):
 
     @model_validator(mode="after")
     def _bind_children(self) -> Self:
+        reject_duplicates(self.items, _ITEM_ALREADY_COMPOSED)
+        reject_duplicates(self.connections, _CONNECTION_ALREADY_COMPOSED)
         for item in self.items:
             self._adopt_item(item)
         for connection in self.connections:
@@ -290,12 +305,14 @@ class PipingNetworkSegment(SensingLocation):
 
     def add_item(self, item: PipingNetworkSegmentItem) -> Self:
         """Compose ``item`` under this segment, enforcing single ownership."""
+        reject_recomposition(item, self.items, _ITEM_ALREADY_COMPOSED)
         self._adopt_item(item)
         self.items.append(item)
         return self
 
     def add_connection(self, connection: PipingConnection) -> Self:
         """Compose ``connection`` under this segment, enforcing single ownership."""
+        reject_recomposition(connection, self.connections, _CONNECTION_ALREADY_COMPOSED)
         self._adopt_connection(connection)
         self.connections.append(connection)
         return self
@@ -326,12 +343,14 @@ class PipingNetworkSystem(DexpiBaseModel):
 
     @model_validator(mode="after")
     def _bind_segments(self) -> Self:
+        reject_duplicates(self.segments, _SEGMENT_ALREADY_COMPOSED)
         for segment in self.segments:
             self._adopt_segment(segment)
         return self
 
     def add_segment(self, segment: PipingNetworkSegment) -> Self:
         """Compose ``segment`` under this system, enforcing single ownership."""
+        reject_recomposition(segment, self.segments, _SEGMENT_ALREADY_COMPOSED)
         self._adopt_segment(segment)
         self.segments.append(segment)
         return self

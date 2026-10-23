@@ -3,16 +3,22 @@
 ``to_proteus_xml`` walks a ``ConceptualModel`` and returns the Proteus XML
 string: the document skeleton, polymorphic element tags, ``GenericAttributes``
 for data fields, nested elements for composition, and ``Association`` for
-references (emitted on both endpoints). It is a pure writer — no XSD
-validation, no round-trip gate. After generating, validate the output with
+references (emitted on both endpoints). It is a writer — no XSD validation,
+no round-trip gate. After generating, validate the output with
 ``examples/validate_dexpi.py``.
+
+Before writing, ``to_proteus_xml`` checks the model graph for the mistakes the
+construction API cannot see (see ``_check_model``): an object composed twice or
+appended to a composition list in place, a ``dex_id`` that is not a unique XML
+``NCName``, and a reference to an object that is not composed in the model.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from dexpigen.base import CustomAttribute, DexpiBaseModel
+from dexpigen.base import Composed, CustomAttribute, DexpiBaseModel, Ref, relation_of
 from dexpigen.enumerations import FailActionClassification
 from dexpigen.equipment import Chamber, Equipment, Nozzle
 from dexpigen.instrumentation import (
@@ -32,6 +38,7 @@ from dexpigen.piping import (
     Pipe,
     PipeOffPageConnector,
     PipeOffPageConnectorReference,
+    PipeOffPageConnectorReferenceByNumber,
     PipingComponent,
     PipingNetworkSegment,
     PipingNetworkSystem,
@@ -235,6 +242,9 @@ def _field_attributes(obj: DexpiBaseModel) -> list[CustomAttribute]:
         add(_string("SensorType", obj.sensor_type))
     elif isinstance(obj, InstrumentationLoopFunction):
         add(_string("InstrumentationLoopFunctionNumber", obj.instrumentation_loop_function_number))
+    elif isinstance(obj, PipeOffPageConnectorReferenceByNumber):
+        add(_string("ReferencedConnectorNumber", obj.referenced_connector_number))
+        add(_string("ReferencedDrawingNumber", obj.referenced_drawing_number))
 
     return attrs
 
@@ -300,6 +310,10 @@ CLASS_ORDER: dict[str, list[str]] = {
         "SensorTypeAssignmentClass",
     ],
     "PipeOffPageConnector": ["PipeConnectorNumberAssignmentClass"],
+    "PipeOffPageConnectorReference": [
+        "ReferencedConnectorNumberAssignmentClass",
+        "ReferencedDrawingNumberAssignmentClass",
+    ],
     "InstrumentationLoopFunction": ["InstrumentationLoopFunctionNumberAssignmentClass"],
 }
 
@@ -319,6 +333,8 @@ def _class_key(obj: DexpiBaseModel) -> str:
         return "PipingComponent"
     if isinstance(obj, PipeOffPageConnector):
         return "PipeOffPageConnector"
+    if isinstance(obj, PipeOffPageConnectorReference):
+        return "PipeOffPageConnectorReference"
     if isinstance(obj, PipingNode):
         return "PipingNode"
     if isinstance(obj, ActuatingSystem):
@@ -641,7 +657,111 @@ def _emit_actuating_function(w: _Writer, function: ActuatingFunction) -> None:
     w.close("ActuatingFunction")
 
 
+# --- model checks run before writing ---
+
+# XML ``NCName`` (the lexical space of ``xsd:ID``), approximated with Unicode
+# word characters: a letter or underscore, then letters, digits, ``_``, ``-``
+# or ``.``. No colon, no whitespace.
+_NCNAME = re.compile(r"[^\W\d][\w.\-]*")
+
+
+def _label(obj: DexpiBaseModel) -> str:
+    return f"{type(obj).__name__} {obj.dex_id!r}"
+
+
+def _model_values(value: Any) -> list[DexpiBaseModel]:
+    """The model objects held by a field value (bare, optional or a list)."""
+    if isinstance(value, DexpiBaseModel):
+        return [value]
+    if isinstance(value, list):
+        return [v for v in value if isinstance(v, DexpiBaseModel)]
+    return []
+
+
+def _fields_with(obj: DexpiBaseModel, relation: Any) -> list[str]:
+    cls = type(obj)
+    if not cls.__pydantic_complete__:
+        cls.model_rebuild()
+    return [
+        name for name, info in cls.model_fields.items()
+        if relation_of(info.metadata) is relation
+    ]
+
+
+def _check_model(model: ConceptualModel) -> None:
+    """Reject a model graph that would serialize to invalid or dangling XML.
+
+    Walks the composition tree from ``model`` (every ``Composed`` field) and
+    raises ``ValueError`` when:
+
+    - an object is reached twice (composed in two places, or listed twice);
+    - a composed child does not record the object that composes it as its
+      owner, which happens when a composition list is mutated in place
+      (``equipment.nozzles.append(...)``) instead of using ``add_*``;
+    - a ``dex_id`` (the Proteus ``ID``) is not an XML ``NCName`` or is not
+      unique, including the implicit ``<dex_id>-DefaultNode`` IDs;
+    - a ``Ref`` field points at an object that is not composed in the model.
+    """
+    composed: dict[int, DexpiBaseModel] = {}
+    order: list[DexpiBaseModel] = []
+
+    def visit(obj: DexpiBaseModel, parent: DexpiBaseModel | None) -> None:
+        if id(obj) in composed:
+            raise ValueError(f"{_label(obj)} is composed more than once in the model")
+        composed[id(obj)] = obj
+        order.append(obj)
+        if (
+            parent is not None
+            and "_owner" in type(obj).__private_attributes__
+            and obj._owner is not parent
+        ):
+            raise ValueError(
+                f"{_label(obj)} is not owned by the {type(parent).__name__} that "
+                "composes it; use the add_* method instead of mutating the list in place"
+            )
+        for name in _fields_with(obj, Composed):
+            for child in _model_values(getattr(obj, name)):
+                visit(child, obj)
+
+    visit(model, None)
+    objects = order[1:]  # the root has no Proteus ID
+
+    seen: set[str] = set()
+    for obj in objects:
+        wire_ids = [obj.dex_id]
+        if "nodes" in type(obj).model_fields:
+            wire_ids.append(f"{obj.dex_id}-DefaultNode")
+        for wire_id in wire_ids:
+            if not _NCNAME.fullmatch(wire_id):
+                raise ValueError(
+                    f"dex_id {wire_id!r} of {type(obj).__name__} is not a valid XML NCName; "
+                    "the Proteus ID must start with a letter or underscore and "
+                    "contain no spaces or colons"
+                )
+            if wire_id in seen:
+                raise ValueError(
+                    f"duplicate dex_id {wire_id!r}: the Proteus ID must be unique in the model"
+                )
+            seen.add(wire_id)
+
+    for obj in objects:
+        for name in _fields_with(obj, Ref):
+            for target in _model_values(getattr(obj, name)):
+                if id(target) not in composed:
+                    raise ValueError(
+                        f"{_label(target)} is referenced by {_label(obj)}.{name} "
+                        "but not composed anywhere in the model"
+                    )
+
+
 def to_proteus_xml(model: ConceptualModel) -> str:
+    """Serialize ``model`` to a Proteus 4.1.1 XML string.
+
+    Raises ``ValueError`` if the model graph fails the checks in
+    ``_check_model``. The output is not schema-validated here; run
+    ``examples/validate_dexpi.py`` on it.
+    """
+    _check_model(model)
     global _MODEL
     _MODEL = model
     w = _Writer()

@@ -179,3 +179,33 @@ def test_every_concrete_equipment_is_instantiable():
         getattr(eq, parent_name)(dex_id=f"{parent_name}-1")
         for leaf_name in leaf_names:
             getattr(eq, leaf_name)(dex_id=f"{leaf_name}-1")
+
+
+def test_nozzle_same_owner_readd_is_rejected():
+    tank = Tank(dex_id="T-1")
+    nozzle = Nozzle(dex_id="N-1")
+    tank.add_nozzle(nozzle)
+    with pytest.raises(ValueError, match="nozzle is already composed under this equipment"):
+        tank.add_nozzle(nozzle)
+    assert tank.nozzles == [nozzle]
+
+
+def test_chamber_same_owner_readd_is_rejected():
+    tank = Tank(dex_id="T-1")
+    chamber = Chamber(dex_id="C-1")
+    tank.add_drying_chamber(chamber)
+    with pytest.raises(ValueError, match="chamber is already composed under this equipment"):
+        tank.add_drying_chamber(chamber)
+    assert tank.drying_chambers == [chamber]
+
+
+def test_duplicate_nozzle_in_constructor_list_is_rejected():
+    nozzle = Nozzle(dex_id="N-1")
+    with pytest.raises(ValueError, match="nozzle is already composed under this equipment"):
+        Tank(dex_id="T-1", nozzles=[nozzle, nozzle])
+
+
+def test_duplicate_chamber_in_constructor_list_is_rejected():
+    chamber = Chamber(dex_id="C-1")
+    with pytest.raises(ValueError, match="chamber is already composed under this equipment"):
+        Tank(dex_id="T-1", drying_chambers=[chamber, chamber])

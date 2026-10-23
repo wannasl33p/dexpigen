@@ -372,3 +372,48 @@ def test_sensing_location_mro_keeps_piping_component_roles():
     assert isinstance(element, piping.PipingSourceItem)
     assert isinstance(element, piping.PipingTargetItem)
     assert isinstance(element, piping.PipingNetworkSegmentItem)
+
+
+def test_node_same_owner_readd_is_rejected():
+    valve = BallValve(dex_id="V-1")
+    node = PipingNode(dex_id="N-1")
+    valve.add_node(node)
+    with pytest.raises(ValueError, match="node is already composed under this owner"):
+        valve.add_node(node)
+    assert valve.nodes == [node]
+
+
+def test_item_same_owner_readd_is_rejected():
+    segment = PipingNetworkSegment(dex_id="SEG-1")
+    valve = BallValve(dex_id="V-1")
+    segment.add_item(valve)
+    with pytest.raises(ValueError, match="item is already composed under this segment"):
+        segment.add_item(valve)
+    assert segment.items == [valve]
+
+
+def test_connection_same_owner_readd_is_rejected():
+    segment = PipingNetworkSegment(dex_id="SEG-1")
+    pipe = Pipe(dex_id="P-1")
+    segment.add_connection(pipe)
+    with pytest.raises(ValueError, match="connection is already composed under this segment"):
+        segment.add_connection(pipe)
+    assert segment.connections == [pipe]
+
+
+def test_segment_same_owner_readd_is_rejected():
+    system = PipingNetworkSystem(dex_id="PNS-1")
+    segment = PipingNetworkSegment(dex_id="SEG-1")
+    system.add_segment(segment)
+    with pytest.raises(ValueError, match="segment is already composed under this system"):
+        system.add_segment(segment)
+    assert system.segments == [segment]
+
+
+def test_duplicate_child_in_constructor_list_is_rejected():
+    node = PipingNode(dex_id="N-1")
+    with pytest.raises(ValueError, match="node is already composed under this owner"):
+        BallValve(dex_id="V-1", nodes=[node, node])
+    segment = PipingNetworkSegment(dex_id="SEG-1")
+    with pytest.raises(ValueError, match="segment is already composed under this system"):
+        PipingNetworkSystem(dex_id="PNS-1", segments=[segment, segment])
