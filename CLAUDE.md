@@ -5,6 +5,7 @@ DEXPI 1.3 in-memory model — a Python library that holds a DEXPI P&ID 1.3 conce
 ## Project map
 
 - **User docs** — `README.md` is the entry for an agent that *uses* the library (scope, minimal example, links into `docs/`: recipes, pitfalls, generated class index). Start there for API questions.
+- **Docs acceptance** — `acceptance/README.md`: held-out tasks a fresh agent rebuilds from the docs alone, run manually with `scripts/docs_acceptance.py` (billed; `run --dry-run` is free).
 - **Spec** — `.scratch/dexpi-13-inmemory-model/spec.md` (implementation spec; read first).
 - **Glossary** — `CONTEXT.md` (domain vocabulary; use it for every term).
 - **Decisions** — `.scratch/dexpi-13-inmemory-model/map.md` + `issues/` (resolved architecture decisions).

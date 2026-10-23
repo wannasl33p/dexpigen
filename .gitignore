@@ -22,3 +22,6 @@ htmlcov/
 
 # uv (library: lockfile is not committed)
 uv.lock
+
+# Docs acceptance run reports (scripts/docs_acceptance.py)
+acceptance/reports/

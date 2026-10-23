@@ -218,10 +218,12 @@ def test_pitfall_enforced_by_names_existing_tests():
 
 
 def test_size_budgets():
+    # CLAUDE.md is contributor-only and absent from a user's checkout (and from
+    # the docs-acceptance sandbox), so a missing file is not a failure.
     over = [
         f"{name}: {len(_read(ROOT / name).splitlines())} > {limit}"
         for name, limit in BUDGETS.items()
-        if len(_read(ROOT / name).splitlines()) > limit
+        if (ROOT / name).exists() and len(_read(ROOT / name).splitlines()) > limit
     ]
     over += [
         f"{_rel(recipe)}: {len(_read(recipe).splitlines())} > {RECIPE_BUDGET}"
