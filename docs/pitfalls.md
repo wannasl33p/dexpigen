@@ -68,7 +68,7 @@ Error texts below are message fragments. Errors raised inside a constructor arri
 ## Instantiate concrete classes only
 
 - **Symptom:** `Equipment(dex_id=...)` raises `is abstract and cannot be instantiated`.
-- **Why:** DEXPI 1.3 abstract classes (`Equipment`, `PipingComponent`, `PipeFitting`, `PipeOffPageConnector`, `PipingConnection`, the role bases) have no `ComponentClass`.
+- **Why:** DEXPI 1.3 abstract classes (`Equipment`, `PipingComponent`, `PipeOffPageConnector`, `PipingConnection`, the role bases) have no `ComponentClass`.
 - **Fix:** Pick a concrete subclass; the [class index](reference/index.md) shows Abstract: yes/no per class.
 - **Enforced by:** `tests/test_equipment.py::test_equipment_is_abstract`
 
@@ -124,6 +124,6 @@ Error texts below are message fragments. Errors raised inside a constructor arri
 ## Map extraction types by name, with the documented fallbacks
 
 - **Symptom:** No error: an unknown equipment type lands on a wrong concrete class (typically `Tank`).
-- **Why:** Project policy: an extraction type maps to the concrete class of the same name (`tank` to `Tank`, `ball` to `BallValve`). Unmatched equipment becomes `CustomEquipment` with the original label in `source_type_label`, never `Tank`. An unspecified valve becomes the family root `OperatedValve`, `CheckValve` or `SafetyValveOrFitting`.
+- **Why:** Project policy: an extraction type maps to the concrete class of the same name (`tank` to `Tank`, `ball` to `BallValve`). Unmatched equipment becomes `CustomEquipment` with the original label in `source_type_label`, never `Tank`. An unspecified valve becomes the family root `OperatedValve`, `CheckValve` or `SafetyValveOrFitting`; an unspecified fitting becomes `PipeFitting`.
 - **Fix:** Look the name up in the [class index](reference/index.md); otherwise use the fallback above.
 - **Enforced by:** not enforced

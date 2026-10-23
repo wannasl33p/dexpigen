@@ -191,9 +191,14 @@ class FlowMeasuringElement(PipingComponent):
 
 
 class PipeFitting(PipingComponent):
-    """Abstract base for pipe fittings (flange, reducer, line blind)."""
+    """Concrete family root and fallback for an unspecified pipe fitting.
 
-    _abstract: ClassVar[bool] = True
+    DEXPI 1.3 (section 8.43) marks ``PipeFitting`` as a class, not an abstract
+    class, with its own ``ComponentClass``; the C03 example instantiates it.
+    """
+
+    component_class: ClassVar[str] = "PipeFitting"
+    component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/PipeFitting"
 
 
 class Flange(PipeFitting):

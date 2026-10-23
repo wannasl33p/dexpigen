@@ -263,12 +263,12 @@ No own fields.
 
 ### PipeFitting
 
-Abstract base for pipe fittings (flange, reducer, line blind).
+Concrete family root and fallback for an unspecified pipe fitting.
 
-- ComponentClass: -
-- ComponentClassURI: -
+- ComponentClass: `PipeFitting`
+- ComponentClassURI: `http://sandbox.dexpi.org/rdl/PipeFitting`
 - Bases: [PipingComponent](#pipingcomponent)
-- Abstract: yes
+- Abstract: no
 
 No own fields.
 

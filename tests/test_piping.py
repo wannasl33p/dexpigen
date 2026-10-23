@@ -154,9 +154,11 @@ def test_piping_component_is_abstract():
         PipingComponent(dex_id="C-1")
 
 
-def test_pipe_fitting_is_abstract():
-    with pytest.raises(ValidationError):
-        PipeFitting(dex_id="F-1")
+def test_pipe_fitting_is_concrete_family_root():
+    fitting = PipeFitting(dex_id="F-1")
+    assert isinstance(fitting, PipingComponent)
+    assert PipeFitting.component_class == "PipeFitting"
+    assert PipeFitting.component_class_uri == "http://sandbox.dexpi.org/rdl/PipeFitting"
 
 
 def test_pipe_off_page_connector_is_abstract():
