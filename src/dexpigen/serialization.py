@@ -37,6 +37,7 @@ from dexpigen.model import ConceptualModel
 from dexpigen.piping import (
     Pipe,
     PipeOffPageConnector,
+    PipeOffPageConnectorObjectReference,
     PipeOffPageConnectorReference,
     PipeOffPageConnectorReferenceByNumber,
     PipingComponent,
@@ -451,6 +452,29 @@ def _psgfs_located_in(location: SensingLocation) -> list[str]:
     return out
 
 
+def _actuating_functions_located_in(segment: PipingNetworkSegment) -> list[str]:
+    out: list[str] = []
+    for pif in _MODEL.process_instrumentation_functions:  # type: ignore[union-attr]
+        for function in pif.actuating_functions:
+            if function.actuating_location is segment:
+                out.append(function.dex_id)
+    return out
+
+
+def _object_references_to(connector: PipeOffPageConnector) -> list[str]:
+    out: list[str] = []
+    for line in _MODEL.piping_network_systems:  # type: ignore[union-attr]
+        for segment in line.segments:
+            for item in segment.items:
+                ref = getattr(item, "connector_reference", None)
+                if (
+                    isinstance(ref, PipeOffPageConnectorObjectReference)
+                    and ref.referenced_connector is connector
+                ):
+                    out.append(ref.dex_id)
+    return out
+
+
 def _loops_containing(pif: ProcessInstrumentationFunction) -> list[str]:
     out: list[str] = []
     for loop in _MODEL.instrumentation_loop_functions:  # type: ignore[union-attr]
@@ -502,6 +526,8 @@ def _emit_segment(w: _Writer, segment: PipingNetworkSegment) -> None:
     _emit_generic_attributes(w, segment)
     for psgf_id in _psgfs_located_in(segment):
         w.leaf("Association", _attrs(Type="is the location of", ItemID=psgf_id))
+    for function_id in _actuating_functions_located_in(segment):
+        w.leaf("Association", _attrs(Type="is the location of", ItemID=function_id))
     for item in segment.items:
         if isinstance(item, PipeOffPageConnector):
             _emit_off_page_connector(w, item)
@@ -527,10 +553,19 @@ def _emit_off_page_connector(w: _Writer, connector: PipeOffPageConnector) -> Non
     w.open("PipeOffPageConnector", _item_attrs(connector, connector.component_class))
     _emit_connection_points(w, connector)
     _emit_generic_attributes(w, connector)
+    for ref_id in _object_references_to(connector):
+        w.leaf("Association", _attrs(Type="is referenced by", ItemID=ref_id))
     if connector.connector_reference is not None:
         ref = connector.connector_reference
         w.open("PipeOffPageConnectorReference", _item_attrs(ref, ref.component_class))
         _emit_generic_attributes(w, ref)
+        if (
+            isinstance(ref, PipeOffPageConnectorObjectReference)
+            and ref.referenced_connector is not None
+        ):
+            w.leaf("Association", _attrs(
+                Type="refers to", ItemID=ref.referenced_connector.dex_id,
+            ))
         w.close("PipeOffPageConnectorReference")
     w.close("PipeOffPageConnector")
 
@@ -654,6 +689,10 @@ def _emit_actuating_function(w: _Writer, function: ActuatingFunction) -> None:
         w.leaf("Association", _attrs(Type="is logical end of", ItemID=signal_id))
     if function.systems is not None:
         w.leaf("Association", _attrs(Type="is fulfilled by", ItemID=function.systems.dex_id))
+    if function.actuating_location is not None:
+        w.leaf("Association", _attrs(
+            Type="is located in", ItemID=function.actuating_location.dex_id,
+        ))
     w.close("ActuatingFunction")
 
 

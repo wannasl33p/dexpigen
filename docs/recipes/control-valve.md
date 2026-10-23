@@ -14,16 +14,14 @@ DEXPI splits a control valve into four related objects; there is no single "cont
    - an `OperatedValveReference` (`add_operated_valve_reference`) whose `valve` references the valve from step 1, plus an optional `sub_tag_name`;
    - an optional `Positioner` (`add_positioner`) with `device_type_name` and `sub_tag_name`.
    The constructor keywords `controlled_actuator`, `operated_valve_reference` and `positioner` do the same.
-3. **The control function.** An `ActuatingFunction` (optional `actuating_function_number`) sets `systems` to the `ActuatingSystem`; this is a reference. Compose the function under the controlling `ProcessInstrumentationFunction` with `add_actuating_function`; it is not top-level.
+3. **The control function.** An `ActuatingFunction` (optional `actuating_function_number`) sets `systems` to the `ActuatingSystem`, and optionally `actuating_location` to the `PipingNetworkSegment` it acts on; both are references. Compose the function under the controlling `ProcessInstrumentationFunction` with `add_actuating_function`; it is not top-level.
 4. **The signal.** A `SignalConveyingFunction` with `source` the PIF and `target` the `ActuatingFunction`, composed under the PIF with `add_signal_conveying_function`. A signal attaches to the `ActuatingFunction`, never to the `ActuatingSystem` or the actuator.
 5. **Add to the model.** The line holding the valve (`add_piping_network_system`), the `ActuatingSystem` (`add_actuating_system`) and the PIF (`add_process_instrumentation_function`) are top-level.
 6. **Serialize and validate** as in [serialize-and-validate](serialize-and-validate.md).
 
-`ActuatingFunction.actuating_location` exists in the model but is not written to Proteus XML yet; leave it unset when the output must match a reference file.
-
 ## What it becomes in Proteus XML
 
-The `ActuatingSystem` element nests one `ActuatingSystemComponent` per component, distinguished by `ComponentClass` (`ControlledActuator`, `OperatedValveReference`, `Positioner`). The valve reference carries a "refers to" association to the valve, mirrored on the valve as "is referenced by". The `ActuatingFunction` is nested in its PIF with "is fulfilled by" pointing at the system, mirrored on the system as "fulfills". `fail_action` is written as `FailActionSpecialization` with its RDL URI.
+The `ActuatingSystem` element nests one `ActuatingSystemComponent` per component, distinguished by `ComponentClass` (`ControlledActuator`, `OperatedValveReference`, `Positioner`). The valve reference carries a "refers to" association to the valve, mirrored on the valve as "is referenced by". The `ActuatingFunction` is nested in its PIF with "is fulfilled by" pointing at the system, mirrored on the system as "fulfills"; its location is "is located in" the segment, mirrored on the segment as "is the location of". `fail_action` is written as `FailActionSpecialization` with its RDL URI.
 
 ## Pitfalls
 

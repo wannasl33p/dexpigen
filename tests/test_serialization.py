@@ -551,3 +551,74 @@ def test_reference_by_number_serialized_xml_validates_against_xsd(tmp_path):
     path = tmp_path / "opc.xml"
     path.write_text(to_proteus_xml(_opc_model(referenced_connector_number="123")), encoding="utf-8")
     assert proteus_is_valid(str(path))
+
+
+# --- ActuatingFunction location and PipeOffPageConnectorObjectReference ---
+
+def _actuating_location_model() -> ConceptualModel:
+    segment = PipingNetworkSegment(dex_id="SEG-1")
+    line = PipingNetworkSystem(dex_id="LINE-1", segments=[segment])
+    function = ActuatingFunction(dex_id="AF-1", actuating_location=segment)
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1", actuating_functions=[function])
+    model = ConceptualModel(dex_id="MODEL-1")
+    model.add_piping_network_system(line)
+    model.add_process_instrumentation_function(pif)
+    return model
+
+
+def test_actuating_location_is_located_in_and_mirrored_on_segment():
+    root = ET.fromstring(to_proteus_xml(_actuating_location_model()))
+    assert ("is located in", "SEG-1") in _assocs(_find_by_id(root, "AF-1"))
+    assert ("is the location of", "AF-1") in _assocs(_find_by_id(root, "SEG-1"))
+
+
+def test_actuating_function_without_location_has_no_located_in():
+    function = ActuatingFunction(dex_id="AF-1")
+    pif = ProcessInstrumentationFunction(dex_id="PIF-1", actuating_functions=[function])
+    model = ConceptualModel(dex_id="MODEL-1").add_process_instrumentation_function(pif)
+    element = _find_by_id(ET.fromstring(to_proteus_xml(model)), "AF-1")
+    assert all(kind != "is located in" for kind, _ in _assocs(element))
+
+
+@pytest.mark.skipif(shutil.which("xmllint") is None, reason="xmllint is not on PATH")
+def test_actuating_location_serialized_xml_validates_against_xsd(tmp_path):
+    path = tmp_path / "actuating_location.xml"
+    path.write_text(to_proteus_xml(_actuating_location_model()), encoding="utf-8")
+    assert proteus_is_valid(str(path))
+
+
+def _object_reference_model() -> ConceptualModel:
+    from dexpigen.piping import (  # noqa: PLC0415
+        FlowInPipeOffPageConnector,
+        FlowOutPipeOffPageConnector,
+        PipeOffPageConnectorObjectReference,
+    )
+
+    outgoing = FlowOutPipeOffPageConnector(dex_id="OPC-OUT")
+    incoming = FlowInPipeOffPageConnector(dex_id="OPC-IN")
+    incoming.add_connector_reference(
+        PipeOffPageConnectorObjectReference(dex_id="OPCREF-1", referenced_connector=outgoing)
+    )
+    first = PipingNetworkSegment(dex_id="SEG-1")
+    first.add_item(outgoing)
+    second = PipingNetworkSegment(dex_id="SEG-2")
+    second.add_item(incoming)
+    line = PipingNetworkSystem(dex_id="LINE-1")
+    line.add_segment(first)
+    line.add_segment(second)
+    return ConceptualModel(dex_id="MODEL-1").add_piping_network_system(line)
+
+
+def test_object_reference_refers_to_connector_and_is_mirrored():
+    root = ET.fromstring(to_proteus_xml(_object_reference_model()))
+    reference = _find_by_id(root, "OPCREF-1")
+    assert reference.tag == "PipeOffPageConnectorReference"
+    assert ("refers to", "OPC-OUT") in _assocs(reference)
+    assert ("is referenced by", "OPCREF-1") in _assocs(_find_by_id(root, "OPC-OUT"))
+
+
+@pytest.mark.skipif(shutil.which("xmllint") is None, reason="xmllint is not on PATH")
+def test_object_reference_serialized_xml_validates_against_xsd(tmp_path):
+    path = tmp_path / "opc_object_reference.xml"
+    path.write_text(to_proteus_xml(_object_reference_model()), encoding="utf-8")
+    assert proteus_is_valid(str(path))
