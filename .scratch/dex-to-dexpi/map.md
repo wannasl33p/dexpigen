@@ -25,6 +25,7 @@ A spec, ready to implement, for converting a **Dex extraction** into a `Conceptu
 <!-- one line per closed ticket -->
 
 - [Research how the C01 Dex extraction corresponds to C01](issues/02-dex-c01-correspondence.md): every Entity matches one C01 object by position (<= 4 mm); junction = PipeTee, deadend = open segment end, flange = BlindFlange; inventory, nozzle nesting, piping/signal/sensing/valve-reference links are derivable exactly, while chambers, exact classes and C01's system/segment grouping are not (branch `research-dex-c01-correspondence`).
+- [Research the minimum Proteus graphics](issues/01-proteus-graphics-minimum.md): no blocker. All graphics are optional and XSD-valid: a `Position` per item and a `CenterLine` per pipe/signal, before nested children. Dex pixels -> mm with y flipped match C01 within 4 mm. Items need a shape to be visible in a renderer (branch `research-proteus-graphics-minimum`).
 
 ## Not yet specified
 
