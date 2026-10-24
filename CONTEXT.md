@@ -88,6 +88,14 @@ _Avoid_: a `SensingLocation` object in the graph; an `Equipment` or `Chamber` as
 An ISO 15926 term that appears in DEXPI prose only. DEXPI models it as the `InlinePrimaryElement` family (e.g. `FlowMeasuringElement`).
 _Avoid_: `MeasuringElement` as a DEXPI class name
 
+**Dex extraction**:
+Everything the ML pipeline extracted from one P&ID drawing: its **Dex graph**, its recognised texts and the drawing size. The input the library turns into a ConceptualModel.
+_Avoid_: dex_model, dex format, extraction model (they collide with ConceptualModel)
+
+**Dex graph**:
+The part of a Dex extraction that holds its Entities as nodes and their connections as edges, each with drawing geometry.
+_Avoid_: NetworkX graph, ConceptualModel
+
 **Entity**:
-An extraction-time object from the ML pipeline, with attributes and a graph id. Outside this library’s v0.1 API.
-_Avoid_: using Entity as a DEXPI class name
+One extraction-time object in a Dex extraction (a symbol, an equipment outline, a junction, a line end), with a coarse label and a graph id. It is not a DEXPI class.
+_Avoid_: using Entity as a DEXPI class name; PlantItem (that is the DEXPI side)
