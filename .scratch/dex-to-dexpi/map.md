@@ -17,7 +17,7 @@ A spec, ready to implement, for converting a **Dex extraction** into a `Conceptu
   - **Piping hierarchy:** one `PipingNetworkSystem` per connected piping network; a segment is a chain between ends (nozzle, off-page connector, dead end) and tees; a branch at a tee starts a new segment.
   - **Acceptance shape:** compare structure, not XML text. Level 1 inventory per family, level 2 nesting, level 3 connections (piping graph regardless of system/segment grouping, signals, sensing locations, valve references) are exact for the Opus C01 extraction; level 4 attributes are reported only. Output must stay XSD-valid. The same levels give precision/recall for weaker pipelines.
   - **Reference structure** comes from the original C01 (`data/example_pids/C01 DEXPI Reference P&ID/C01V04-VER.EX01.xml`, which has graphics). Entities are matched to C01 objects by position. Checked: the dex equipment centres equal the C01 `Position` values in mm.
-  - **Input models:** `src/dexpigen/entities/` becomes the input model layer. Clean it up, delete what text-free conversion does not need, and keep `dexlib2` and `shapely` as dependencies.
+  - **Input models:** `src/dexpigen/entities/` becomes the input model layer. The details (own models, no `dexlib2`) are in [Decide the Dex extraction input contract](issues/03-dex-input-contract.md).
   - **Graphics** (`Position`, `Extent`, `CenterLine`, ...) are in scope if no blocker is found.
 
 ## Decisions so far
@@ -26,6 +26,7 @@ A spec, ready to implement, for converting a **Dex extraction** into a `Conceptu
 
 - [Research how the C01 Dex extraction corresponds to C01](issues/02-dex-c01-correspondence.md): every Entity matches one C01 object by position (<= 4 mm); junction = PipeTee, deadend = open segment end, flange = BlindFlange; inventory, nozzle nesting, piping/signal/sensing/valve-reference links are derivable exactly, while chambers, exact classes and C01's system/segment grouping are not (branch `research-dex-c01-correspondence`).
 - [Research the minimum Proteus graphics](issues/01-proteus-graphics-minimum.md): no blocker. All graphics are optional and XSD-valid: a `Position` per item and a `CenterLine` per pipe/signal, before nested children. Dex pixels -> mm with y flipped match C01 within 4 mm. Items need a shape to be visible in a renderer (branch `research-proteus-graphics-minimum`).
+- [Decide the Dex extraction input contract](issues/03-dex-input-contract.md): input is `nx.Graph` + `Sequence[Entity]` + `DrawingSize`, all in PNG pixels. The library has its own `dexpigen.entities` models, field-compatible with the pipeline's `dexlib2` entities (no `dexlib2` dependency). Ids link Entities to graph nodes and edges. `LineKind` is `piping` / `signal-line` / `data-line`. Edges without a segment are attachments (equipment-nozzle, actuator-valve). Direction (`forward`/`reverse`/`bidirectional`) is relative to the segment LineString.
 
 ## Not yet specified
 

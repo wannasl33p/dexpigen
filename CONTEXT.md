@@ -93,9 +93,13 @@ Everything the ML pipeline extracted from one P&ID drawing: its **Dex graph**, i
 _Avoid_: dex_model, dex format, extraction model (they collide with ConceptualModel)
 
 **Dex graph**:
-The part of a Dex extraction that holds its Entities as nodes and their connections as edges, each with drawing geometry.
-_Avoid_: NetworkX graph, ConceptualModel
+The part of a Dex extraction that holds its Entities as nodes and their connections as edges. The pipeline hands it over as a NetworkX graph next to the Entity list. The drawing geometry of an object comes from its Entity, not from the graph node.
+_Avoid_: ConceptualModel; "the graph" without saying which (Dex graph vs the DEXPI object graph)
+
+**Line kind**:
+The drawn style of a Dex graph line: `piping` (a process line, which becomes piping), `signal-line` (an instrument signal line) or `data-line` (a data or software link, drawn with small circles). Both `signal-line` and `data-line` become signal connections of instrumentation functions. The library derives the meaning of a line from its kind and its ends.
+_Avoid_: line type, edge type; SignalLine (that is the DEXPI-side signal connection)
 
 **Entity**:
-One extraction-time object in a Dex extraction (a symbol, an equipment outline, a junction, a line end), with a coarse label and a graph id. It is not a DEXPI class.
+One extraction-time object in a Dex extraction (a symbol, an equipment outline, a line segment), with a coarse label and drawing geometry in image pixels. Its id is the id of its node, or for a line segment of its edge, in the Dex graph. It is not a DEXPI class.
 _Avoid_: using Entity as a DEXPI class name; PlantItem (that is the DEXPI side)
