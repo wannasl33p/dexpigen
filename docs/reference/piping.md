@@ -49,7 +49,9 @@ A connection point owned by a `PipingNodeOwner`.
 - Bases: [DexpiBaseModel](model.md#dexpibasemodel)
 - Abstract: no
 
-No own fields.
+| Field | Type | Default | Relation |
+| --- | --- | --- | --- |
+| `position` | XY \| None | `None` |  |
 
 ### PipingNodeOwner
 
@@ -131,6 +133,7 @@ Abstract base for a piping connection between two endpoints.
 | `source_node` | [PipingNode](#pipingnode) \| None | `None` | ref |
 | `target_item` | [PipingTargetItem](#pipingtargetitem) \| None | `None` | ref |
 | `target_node` | [PipingNode](#pipingnode) \| None | `None` | ref |
+| `center_line` | Points \| None | `None` |  |
 
 ### Pipe
 
@@ -160,7 +163,7 @@ Abstract base for an in-line piping component (valve or fitting).
 
 - ComponentClass: -
 - ComponentClassURI: -
-- Bases: [PipingNetworkSegmentItem](#pipingnetworksegmentitem), [PipingSourceItem](#pipingsourceitem), [PipingTargetItem](#pipingtargetitem), [SensingLocation](#sensinglocation)
+- Bases: [PipingNetworkSegmentItem](#pipingnetworksegmentitem), [PipingSourceItem](#pipingsourceitem), [PipingTargetItem](#pipingtargetitem), [SensingLocation](#sensinglocation), [GraphicItem](model.md#graphicitem)
 - Abstract: yes
 
 | Field | Type | Default | Relation |
@@ -314,7 +317,7 @@ Abstract base for a pipe off-page connector.
 
 - ComponentClass: -
 - ComponentClassURI: -
-- Bases: [PipingNetworkSegmentItem](#pipingnetworksegmentitem), [PipingNodeOwner](#pipingnodeowner)
+- Bases: [PipingNetworkSegmentItem](#pipingnetworksegmentitem), [PipingNodeOwner](#pipingnodeowner), [GraphicItem](model.md#graphicitem)
 - Abstract: yes
 
 | Field | Type | Default | Relation |

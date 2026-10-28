@@ -15,8 +15,11 @@ from typing import Annotated, ClassVar, Self
 from pydantic import Field, PrivateAttr, model_validator
 
 from dexpigen.base import (
+    XY,
     Composed,
     DexpiBaseModel,
+    GraphicItem,
+    Points,
     Ref,
     reject_duplicates,
     reject_recomposition,
@@ -33,7 +36,12 @@ _SEGMENT_ALREADY_COMPOSED = "segment is already composed under this system"
 
 
 class PipingNode(DexpiBaseModel):
-    """A connection point owned by a ``PipingNodeOwner``."""
+    """A connection point owned by a ``PipingNodeOwner``.
+
+    ``position`` (optional, sheet mm) is where a pipe's centre line meets it.
+    """
+
+    position: XY | None = None
 
     _owner: PipingNodeOwner | None = PrivateAttr(default=None)
 
@@ -90,7 +98,11 @@ class SensingLocation(DexpiBaseModel):
 
 
 class PipingConnection(DexpiBaseModel):
-    """Abstract base for a piping connection between two endpoints."""
+    """Abstract base for a piping connection between two endpoints.
+
+    ``center_line`` (optional, sheet mm, source to target) is written as a
+    ``CenterLine`` in the owning segment: a Proteus ``Connection`` holds no graphics.
+    """
 
     _abstract: ClassVar[bool] = True
 
@@ -98,6 +110,7 @@ class PipingConnection(DexpiBaseModel):
     source_node: Annotated[PipingNode | None, Ref] = None
     target_item: Annotated[PipingTargetItem | None, Ref] = None
     target_node: Annotated[PipingNode | None, Ref] = None
+    center_line: Points | None = None
 
     _owner: PipingNetworkSegment | None = PrivateAttr(default=None)
 
@@ -127,7 +140,7 @@ class PipingNetworkSegmentItem(DexpiBaseModel):
 
 
 class PipingComponent(
-    PipingNetworkSegmentItem, PipingSourceItem, PipingTargetItem, SensingLocation
+    PipingNetworkSegmentItem, PipingSourceItem, PipingTargetItem, SensingLocation, GraphicItem
 ):
     """Abstract base for an in-line piping component (valve or fitting).
 
@@ -215,7 +228,7 @@ class LineBlind(PipeFitting):
     component_class_uri: ClassVar[str] = "http://data.posccaesar.org/rdl/RDS280034"
 
 
-class PipeOffPageConnector(PipingNetworkSegmentItem, PipingNodeOwner):
+class PipeOffPageConnector(PipingNetworkSegmentItem, PipingNodeOwner, GraphicItem):
     """Abstract base for a pipe off-page connector.
 
     A connector sits in a segment's ``items`` and owns ``PipingNode`` points;

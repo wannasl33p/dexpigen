@@ -56,7 +56,7 @@ The P&ID instrument/function bubble.
 
 - ComponentClass: `ProcessInstrumentationFunction`
 - ComponentClassURI: `http://sandbox.dexpi.org/rdl/ProcessInstrumentationFunction`
-- Bases: [SignalConveyingFunctionSource](#signalconveyingfunctionsource), [SignalConveyingFunctionTarget](#signalconveyingfunctiontarget)
+- Bases: [SignalConveyingFunctionSource](#signalconveyingfunctionsource), [SignalConveyingFunctionTarget](#signalconveyingfunctiontarget), [GraphicItem](model.md#graphicitem)
 - Abstract: no
 
 | Field | Type | Default | Relation |
@@ -127,7 +127,7 @@ The energy-to-motion transducer of a control-valve assembly.
 
 - ComponentClass: `ControlledActuator`
 - ComponentClassURI: `http://sandbox.dexpi.org/rdl/ControlledActuator`
-- Bases: [DexpiBaseModel](model.md#dexpibasemodel)
+- Bases: [GraphicItem](model.md#graphicitem)
 - Abstract: no
 
 | Field | Type | Default | Relation |
@@ -157,7 +157,7 @@ The positioner of a control-valve assembly.
 
 - ComponentClass: `Positioner`
 - ComponentClassURI: `http://sandbox.dexpi.org/rdl/Positioner`
-- Bases: [DexpiBaseModel](model.md#dexpibasemodel)
+- Bases: [GraphicItem](model.md#graphicitem)
 - Abstract: no
 
 | Field | Type | Default | Relation |
@@ -184,7 +184,7 @@ A control-valve physical assembly (actuator, valve reference, positioner).
 
 ### SignalConveyingFunction
 
-A dashed signal line connecting two functions (no graphics).
+A dashed signal line connecting two functions.
 
 - ComponentClass: `SignalConveyingFunction`
 - ComponentClassURI: `http://sandbox.dexpi.org/rdl/SignalConveyingFunction`
@@ -195,6 +195,7 @@ A dashed signal line connecting two functions (no graphics).
 | --- | --- | --- | --- |
 | `source` | [SignalConveyingFunctionSource](#signalconveyingfunctionsource) \| None | `None` | ref |
 | `target` | [SignalConveyingFunctionTarget](#signalconveyingfunctiontarget) \| None | `None` | ref |
+| `center_line` | Points \| None | `None` |  |
 
 ### SignalOffPageConnector
 

@@ -6,7 +6,7 @@ from typing import Annotated, Self
 
 from pydantic import Field
 
-from dexpigen.base import Composed, DexpiBaseModel
+from dexpigen.base import XY, Composed, DexpiBaseModel
 from dexpigen.equipment import Equipment
 from dexpigen.instrumentation import (
     ActuatingSystem,
@@ -21,7 +21,11 @@ class ConceptualModel(DexpiBaseModel):
 
     ``SignalConveyingFunction`` and ``ActuatingFunction`` are not top-level:
     they are composed under their owning ``ProcessInstrumentationFunction``.
+    ``drawing_extent`` (optional) is the sheet size in mm, written as the
+    ``Drawing`` extent.
     """
+
+    drawing_extent: XY | None = None
 
     equipment: Annotated[list[Equipment], Composed] = Field(default_factory=list)
     piping_network_systems: Annotated[list[PipingNetworkSystem], Composed] = Field(

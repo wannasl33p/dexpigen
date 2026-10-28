@@ -16,7 +16,7 @@ from typing import Annotated, Any, ClassVar, Self
 
 from pydantic import Field, PrivateAttr, model_validator
 
-from dexpigen.base import Composed, CustomAttribute, DexpiBaseModel, Ref
+from dexpigen.base import Composed, CustomAttribute, DexpiBaseModel, GraphicItem, Points, Ref
 from dexpigen.enumerations import FailActionClassification
 from dexpigen.piping import OperatedValve, PipingNetworkSegment, SensingLocation
 
@@ -56,7 +56,7 @@ class ProcessSignalGeneratingFunction(SignalConveyingFunctionSource):
 
 
 class ProcessInstrumentationFunction(
-    SignalConveyingFunctionSource, SignalConveyingFunctionTarget
+    SignalConveyingFunctionSource, SignalConveyingFunctionTarget, GraphicItem
 ):
     """The P&ID instrument/function bubble.
 
@@ -205,7 +205,7 @@ class InstrumentationLoopFunction(DexpiBaseModel):
     ] = Field(default_factory=list)
 
 
-class ControlledActuator(DexpiBaseModel):
+class ControlledActuator(GraphicItem):
     """The energy-to-motion transducer of a control-valve assembly."""
     component_class: ClassVar[str] = "ControlledActuator"
     component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/ControlledActuator"
@@ -229,7 +229,7 @@ class OperatedValveReference(DexpiBaseModel):
     _owner: ActuatingSystem | None = PrivateAttr(default=None)
 
 
-class Positioner(DexpiBaseModel):
+class Positioner(GraphicItem):
     """The positioner of a control-valve assembly."""
     component_class: ClassVar[str] = "Positioner"
     component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/Positioner"
@@ -310,12 +310,16 @@ class ActuatingFunction(
 
 
 class SignalConveyingFunction(DexpiBaseModel):
-    """A dashed signal line connecting two functions (no graphics)."""
+    """A dashed signal line connecting two functions.
+
+    ``center_line`` (optional, sheet mm, source to target) is the drawn line.
+    """
     component_class: ClassVar[str] = "SignalConveyingFunction"
     component_class_uri: ClassVar[str] = "http://sandbox.dexpi.org/rdl/SignalConveyingFunction"
 
     source: Annotated[SignalConveyingFunctionSource | None, Ref] = None
     target: Annotated[SignalConveyingFunctionTarget | None, Ref] = None
+    center_line: Points | None = None
 
     _owner: ProcessInstrumentationFunction | None = PrivateAttr(default=None)
 

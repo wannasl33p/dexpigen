@@ -8,7 +8,7 @@ An ML extraction pipeline produces a graph of a P&ID: typed plant items (equipme
 
 ## Solution
 
-A MIT-licensed Python 3.13 / Pydantic v2 library that holds the DEXPI 1.3 conceptual model in memory and serializes it to Proteus XML. Callers build typed objects directly (pyDEXPI-shaped constructors, nested composition, Python object references, `validate_assignment=True`). Every object carries a frozen UUID `id` and a required extraction `dex_id`. Construct-time invariants are enforced as objects are assembled, so an invalid graph cannot be produced. No NetworkX mapper, no graphics.
+A MIT-licensed Python 3.13 / Pydantic v2 library that holds the DEXPI 1.3 conceptual model in memory and serializes it to Proteus XML. Callers build typed objects directly (pyDEXPI-shaped constructors, nested composition, Python object references, `validate_assignment=True`). Every object carries a frozen UUID `id` and a required extraction `dex_id`. Construct-time invariants are enforced as objects are assembled, so an invalid graph cannot be produced. No NetworkX mapper, no graphics. (Both amended 2026-10-28: `dexpigen.entities` converts a Dex extraction, and drawing graphics are optional fields; see `.scratch/dex-to-dexpi/`.)
 
 ## User Stories
 
@@ -76,7 +76,7 @@ A MIT-licensed Python 3.13 / Pydantic v2 library that holds the DEXPI 1.3 concep
 ## Out of Scope
 
 - The mapper from a NetworkX/entity graph into the model (a later effort; the 1:1 name rule is defined here but the mapper itself is not).
-- Graphics, coordinates, and the ShapeCatalogue.
+- Graphics, coordinates, and the ShapeCatalogue. (Amended 2026-10-28: optional drawing graphics are in the model now, the ShapeCatalogue stays out; see `.scratch/dex-to-dexpi/issues/07-graphics-in-the-model.md`.)
 - Using this library as a CAE import/export product.
 - pyDEXPI as a dependency or a source of classes (architectural reference only).
 - Sensing/device layer beyond the `SensingLocation` subset: `Transmitter`, `PrimaryElement`, `MeasuringElement`, `FlowDetector`.

@@ -16,7 +16,7 @@
 ## What the writer does not do
 
 - It does not validate against the XSD (step 5 does).
-- It writes no graphics, no `ShapeCatalogue`, no plant structure, and the same `PlantInformation` header for every model.
+- It writes graphics only where the model carries them (`position`, `outline`, `center_line`, `drawing_extent`), never a `ShapeCatalogue` or plant structure, and the same `PlantInformation` header for every model.
 - It does not read Proteus XML; there is no parser yet.
 
 ## Pitfalls

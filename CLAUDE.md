@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-DEXPI 1.3 in-memory model — a Python library that holds a DEXPI P&ID 1.3 conceptual model in memory (a typed object graph; no graphics, no Proteus XML, no NetworkX).
+DEXPI 1.3 in-memory model — a Python library that holds a DEXPI P&ID 1.3 conceptual model in memory (a typed object graph, not Proteus XML; drawing graphics are optional fields, there is no shape catalogue). The model holds no NetworkX; NetworkX appears only in the `dexpigen.entities` input layer.
 
 ## Project map
 
@@ -10,6 +10,7 @@ DEXPI 1.3 in-memory model — a Python library that holds a DEXPI P&ID 1.3 conce
 - **Glossary** — `CONTEXT.md` (domain vocabulary; use it for every term).
 - **Decisions** — `.scratch/dexpi-13-inmemory-model/map.md` + `issues/` (resolved architecture decisions).
 - **Research** — `.scratch/dexpi-13-inmemory-model/research/` (DEXPI 1.3 facts with citations).
+- **Dex input layer** — `src/dexpigen/entities/`: the Dex extraction input contract (Entities, `check_extraction`) and the converter (`dex_to_model`, `dex_to_proteus`), decided in `.scratch/dex-to-dexpi/` (`map.md` + `issues/`). `examples/C01/dex_model/` is the C01 sample; its adapter `load.py` is not public API.
 - **Examples** — `examples/C01/` is the versioned recovery of the reference P&ID (see its `README.md`): `build.py` builds the model for the latest milestone, `verNNN/c01.xml` is that milestone's golden serialization. Trim with `examples/trim_dexpi_xml.py`, validate with `examples/validate_dexpi.py` (xmllint + XSD).
 
 ## Rules

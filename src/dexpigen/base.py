@@ -3,7 +3,7 @@
 from typing import Annotated, Any, ClassVar, Final, Self
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, model_validator
 
 
 class Relation:
@@ -134,3 +134,27 @@ class DexpiBaseModel(BaseModel):
         if cls._abstract:
             raise ValueError(f"{cls.__name__} is abstract and cannot be instantiated")
         return data
+
+
+# Drawing graphics are optional and use sheet millimetres: origin bottom-left, y up.
+# ``type`` aliases keep the names readable in the generated class index.
+type XY = tuple[FiniteFloat, FiniteFloat]
+# A drawn line or outline: at least two points.
+type Points = Annotated[list[XY], Field(min_length=2)]
+
+
+class GraphicItem(DexpiBaseModel):
+    """Abstract role: an item drawn on the sheet (equipment, nozzle, piping
+    component, off-page connector, instrument bubble, actuator, positioner).
+
+    ``to_proteus_xml`` writes the fields the way the DEXPI reference P&IDs
+    carry them: ``position`` as the item's ``Position`` (no rotation) and
+    ``outline`` as an inline ``PolyLine`` in absolute coordinates, so a viewer
+    draws the item without a ``ShapeCatalogue``. Both stay ``None`` for a
+    model built without graphics.
+    """
+
+    _abstract: ClassVar[bool] = True
+
+    position: XY | None = None
+    outline: Points | None = None

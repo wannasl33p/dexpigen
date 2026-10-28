@@ -10,6 +10,7 @@ from pydantic import Field, PrivateAttr, model_validator
 from dexpigen.base import (
     Composed,
     DexpiBaseModel,
+    GraphicItem,
     Ref,
     reject_duplicates,
     reject_recomposition,
@@ -37,7 +38,7 @@ class Chamber(DexpiBaseModel):
     _owner: Equipment | None = PrivateAttr(default=None)
 
 
-class Nozzle(PipingSourceItem, PipingTargetItem, SensingLocation):
+class Nozzle(PipingSourceItem, PipingTargetItem, SensingLocation, GraphicItem):
     """A nozzle composed under an equipment (DEXPI ``Equipment.Nozzle``).
 
     A nozzle is a piping source and target, a sensing location, and owns its
@@ -53,7 +54,7 @@ class Nozzle(PipingSourceItem, PipingTargetItem, SensingLocation):
     _owner: Equipment | None = PrivateAttr(default=None)
 
 
-class Equipment(DexpiBaseModel):
+class Equipment(GraphicItem):
     """Abstract root of the equipment tree (DEXPI ``Equipment.Equipment``)."""
 
     _abstract: ClassVar[bool] = True

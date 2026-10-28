@@ -5,10 +5,11 @@ A Python 3.13 / Pydantic v2 library that holds a DEXPI P&ID 1.3 conceptual model
 ## Scope and limits
 
 - **Writes only.** `to_proteus_xml` turns a `ConceptualModel` into a Proteus 4.1.1 XML string. There is no reader: Proteus or DEXPI XML cannot be loaded back into the model yet.
-- **No graphics.** No shapes, positions, labels or `ShapeCatalogue`; the `PlantInformation` header is the same fixed one for every model.
+- **Optional graphics, no symbol library.** Drawn items can carry a `position` and an `outline`, pipes and signals a `center_line`, the model a `drawing_extent` (sheet millimetres, y up); they are written as `Position`, inline `PolyLine`, `CenterLine` and `Drawing`. There is no `ShapeCatalogue`, no labels or text, and the `PlantInformation` header is the same fixed one for every model.
 - **Covered DEXPI areas:** the equipment tree (98 concrete classes, the fallback `CustomEquipment` included), nozzles and chambers; piping network systems, segments, connections and nodes; operated, check and safety valves, pipe fittings (`PipeTee`, `PipeReducer`, `Flange`, `LineBlind`), `FlowMeasuringElement` and pipe off-page connectors; process instrumentation functions with sensing functions, signals, the control-valve assembly (`ActuatingSystem`, `ActuatingFunction`) and instrumentation loops.
 - **Everything else** is carried as generic attributes (`CustomAttribute`) or is out of scope (plant structure, equipment internals such as column sections, most fitting and valve leaves, primary elements).
 - **Checked, not schema-validated.** Constructors and `add_*` methods enforce ownership and reference types; `to_proteus_xml` checks the whole graph before writing. Schema validity is proven separately with the bundled XSD.
+- **Dex extraction in.** `dexpigen.entities` takes the ML pipeline's output: the Dex graph (NetworkX), its Entities (`SymbolEntity`, `EquipmentEntity`, `SegmentEntity`) and the `DrawingSize`, all in image pixels. `check_extraction` checks them against the input contract and raises one `DexExtractionError` that lists every problem. `dex_to_model` converts them into a `ConceptualModel` with graphics and returns a `DexConversion` whose `report` names everything skipped or assumed; `dex_to_proteus` goes straight to XML. Classes are coarse: the label picks the family root (`CustomEquipment`, `OperatedValve`), since no text is read.
 
 ## Install and commands
 
@@ -20,9 +21,10 @@ uv run pytest                                          # run the tests
 uv run python examples/minimal.py                      # build, write and validate a small model
 uv run python examples/validate_dexpi.py <file.xml>    # validate any Proteus XML against the XSD
 uv run python scripts/gen_reference.py                 # regenerate docs/reference after a code change
+uv run python examples/C01/dex_model/load.py           # check the C01 Dex sample and convert it to XML
 ```
 
-Import classes from their modules: `dexpigen.equipment`, `dexpigen.piping`, `dexpigen.instrumentation`, `dexpigen.model` (`ConceptualModel`), `dexpigen.enumerations`; `to_proteus_xml` and `CustomAttribute` also come from `dexpigen`.
+Import classes from their modules: `dexpigen.equipment`, `dexpigen.piping`, `dexpigen.instrumentation`, `dexpigen.model` (`ConceptualModel`), `dexpigen.enumerations`; `to_proteus_xml` and `CustomAttribute` also come from `dexpigen`. The Dex extraction input comes from `dexpigen.entities`.
 
 ## Minimal example
 
@@ -73,3 +75,4 @@ Read this file, then the recipe for your task, then the pitfalls; open the class
 - [Class index](docs/reference/index.md): to look up a class, its `ComponentClass`, its fields and whether each field composes or references.
 - [Glossary](CONTEXT.md): when a DEXPI or project term is unclear.
 - [C01 reference P&ID build](examples/C01/build.py): for a large real example that reproduces most of the DEXPI C01 reference P&ID.
+- [Dex extraction](src/dexpigen/entities/convert.py): when turning the ML pipeline's Dex graph and Entities into a model or XML; its docstring lists the mapping rules, `src/dexpigen/entities/extraction.py` the graph conventions, and `examples/C01/dex_model/load.py` converts a real sample.

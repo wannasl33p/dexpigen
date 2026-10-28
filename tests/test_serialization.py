@@ -659,3 +659,22 @@ def test_signal_connector_serialized_xml_validates_against_xsd(tmp_path):
     path = tmp_path / "signal_connector.xml"
     path.write_text(to_proteus_xml(_signal_connector_model()), encoding="utf-8")
     assert proteus_is_valid(str(path))
+
+
+def test_double_quote_in_an_attribute_value_is_escaped():
+    tank = Tank(dex_id="Tank-1", tag_name='T "101"')
+    root = ET.fromstring(to_proteus_xml(ConceptualModel(dex_id="model").add_equipment(tank)))
+    assert _generic_attribute(_find_by_id(root, "Tank-1"), "TagNameAssignmentClass").get("Value") == 'T "101"'
+
+
+@pytest.mark.skipif(shutil.which("xmllint") is None, reason="xmllint is not on PATH")
+def test_actuating_system_without_a_function_has_no_fulfills_association(tmp_path):
+    from dexpigen.instrumentation import ActuatingSystem, ControlledActuator
+
+    system = ActuatingSystem(dex_id="ActuatingSystem-1")
+    system.add_controlled_actuator(ControlledActuator(dex_id="ControlledActuator-1"))
+    xml = to_proteus_xml(ConceptualModel(dex_id="model").add_actuating_system(system))
+    assert 'Type="fulfills"' not in xml
+    path = tmp_path / "actuating_system.xml"
+    path.write_text(xml, encoding="utf-8")
+    assert proteus_is_valid(str(path))

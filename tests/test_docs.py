@@ -28,7 +28,7 @@ import pytest
 from pydantic import BaseModel
 
 import dexpigen
-from dexpigen import base, enumerations, equipment, instrumentation, model, piping, serialization
+from dexpigen import base, entities, enumerations, equipment, instrumentation, model, piping, serialization
 
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
@@ -92,7 +92,7 @@ def _latest_golden() -> Path:
 
 def _dexpigen_names() -> set[str]:
     names: set[str] = set()
-    for module in (dexpigen, base, enumerations, equipment, piping, instrumentation, model, serialization):
+    for module in (dexpigen, base, entities, enumerations, equipment, piping, instrumentation, model, serialization):
         for name, obj in vars(module).items():
             names.add(name)
             if not inspect.isclass(obj):

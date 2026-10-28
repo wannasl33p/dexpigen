@@ -4,7 +4,7 @@ Run:  uv run python scripts/gen_reference.py
 
 Every ``DexpiBaseModel`` subclass, every ``StrEnum`` and ``CustomAttribute``
 is introspected from an explicit module list (not all of ``dexpigen.*``: the
-untracked ``dexpigen.entities`` package cannot be imported). Output is
+``dexpigen.entities`` input layer is not part of the ConceptualModel). Output is
 deterministic: classes follow the inheritance tree (root, then descendants
 depth-first, siblings in definition order), with no timestamps.
 ``tests/test_reference_docs.py`` regenerates it in memory and fails when the

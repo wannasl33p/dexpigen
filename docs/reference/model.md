@@ -8,6 +8,7 @@ Generated from `dexpigen.base`, `dexpigen.model` by `scripts/gen_reference.py`; 
 
 - [CustomAttribute](#customattribute)
 - [DexpiBaseModel](#dexpibasemodel)
+  - [GraphicItem](#graphicitem)
   - [ConceptualModel](#conceptualmodel)
 
 ## Classes
@@ -48,6 +49,20 @@ Root of every object in the in-memory DEXPI 1.3 conceptual model.
 | `custom_attributes` | list[[CustomAttribute](#customattribute)] | `[]` | composed |
 | `component_name` | str \| None | `None` |  |
 
+### GraphicItem
+
+Abstract role: an item drawn on the sheet (equipment, nozzle, piping component, off-page connector, instrument bubble, actuator, positioner).
+
+- ComponentClass: -
+- ComponentClassURI: -
+- Bases: [DexpiBaseModel](#dexpibasemodel)
+- Abstract: yes
+
+| Field | Type | Default | Relation |
+| --- | --- | --- | --- |
+| `position` | XY \| None | `None` |  |
+| `outline` | Points \| None | `None` |  |
+
 ### ConceptualModel
 
 The root that aggregates all top-level objects of a P&ID.
@@ -59,6 +74,7 @@ The root that aggregates all top-level objects of a P&ID.
 
 | Field | Type | Default | Relation |
 | --- | --- | --- | --- |
+| `drawing_extent` | XY \| None | `None` |  |
 | `equipment` | list[[Equipment](equipment.md#equipment)] | `[]` | composed |
 | `piping_network_systems` | list[[PipingNetworkSystem](piping.md#pipingnetworksystem)] | `[]` | composed |
 | `process_instrumentation_functions` | list[[ProcessInstrumentationFunction](instrumentation.md#processinstrumentationfunction)] | `[]` | composed |

@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from dexpigen.base import Composed, CustomAttribute, DexpiBaseModel, Ref, relation_of
+from dexpigen.base import XY, Composed, CustomAttribute, DexpiBaseModel, GraphicItem, Ref, relation_of
 from dexpigen.enumerations import FailActionClassification
 from dexpigen.equipment import Chamber, Equipment, Nozzle
 from dexpigen.instrumentation import (
@@ -130,7 +130,8 @@ RDL_ORDER: dict[str, int] = {
 
 
 def _esc(value: str) -> str:
-    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    """Escape text for a double-quoted XML attribute."""
+    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def _attrs(**kw: Any) -> str:
@@ -172,6 +173,53 @@ class _Writer:
 
     def text(self) -> str:
         return "\n".join(self._lines) + "\n"
+
+
+# --- drawing graphics (optional; laid out as in the DEXPI reference P&IDs) ---
+
+
+def _num(value: float) -> str:
+    """A sheet coordinate in mm: at most 4 decimals, no trailing zeros."""
+    text = f"{value:.4f}".rstrip("0").rstrip(".")
+    return "0" if text == "-0" else text
+
+
+def _emit_position(w: _Writer, point: XY) -> None:
+    w.open("Position", "")
+    w.leaf("Location", _attrs(X=_num(point[0]), Y=_num(point[1]), Z="0"))
+    w.leaf("Axis", _attrs(X="0", Y="0", Z="1"))
+    w.leaf("Reference", _attrs(X="1", Y="0", Z="0"))  # no rotation
+    w.close("Position")
+
+
+def _emit_graphics(w: _Writer, item: GraphicItem) -> None:
+    """The item's outline and ``Position``; they precede every other child."""
+    if item.outline is not None:
+        w.open("PolyLine", _attrs(NumPoints=len(item.outline)))
+        w.leaf("Presentation", _attrs(LineType="0", LineWeight="0.25", R="0", G="0", B="0"))
+        for x, y in item.outline:
+            w.leaf("Coordinate", _attrs(X=_num(x), Y=_num(y)))
+        w.close("PolyLine")
+    if item.position is not None:
+        _emit_position(w, item.position)
+
+
+def _emit_center_line(w: _Writer, points: list[XY]) -> None:
+    w.open("CenterLine", _attrs(NumPoints=len(points)))
+    for x, y in points:
+        w.leaf("Coordinate", _attrs(X=_num(x), Y=_num(y)))
+    w.close("CenterLine")
+
+
+def _emit_drawing(w: _Writer, model: ConceptualModel) -> None:
+    width, height = model.drawing_extent
+    w.open("Drawing", _attrs(Name=model.dex_id, Type="PID"))
+    w.leaf("Presentation", _attrs(R="1", G="1", B="1"))
+    w.open("Extent", "")
+    w.leaf("Min", _attrs(X="0", Y="0"))
+    w.leaf("Max", _attrs(X=_num(width), Y=_num(height)))
+    w.close("Extent")
+    w.close("Drawing")
 
 
 def _assignment_class(field: str) -> str:
@@ -491,7 +539,8 @@ def _loops_containing(pif: ProcessInstrumentationFunction) -> list[str]:
 def _emit_actuating_system(w: _Writer, system: ActuatingSystem) -> None:
     w.open("ActuatingSystem", _item_attrs(system, "ActuatingSystem"))
     _emit_generic_attributes(w, system)
-    w.leaf("Association", _attrs(Type="fulfills", ItemID=_actuating_function_of(system)))
+    if function_id := _actuating_function_of(system):  # an IDREF may not be empty
+        w.leaf("Association", _attrs(Type="fulfills", ItemID=function_id))
     if system.controlled_actuator is not None:
         _emit_component(w, system.controlled_actuator)
     if system.operated_valve_reference is not None:
@@ -503,6 +552,7 @@ def _emit_actuating_system(w: _Writer, system: ActuatingSystem) -> None:
 
 def _emit_component(w: _Writer, component: ControlledActuator | Positioner) -> None:
     w.open("ActuatingSystemComponent", _item_attrs(component, component.component_class))
+    _emit_graphics(w, component)
     _emit_generic_attributes(w, component)
     w.close("ActuatingSystemComponent")
 
@@ -530,6 +580,10 @@ def _emit_segment(w: _Writer, segment: PipingNetworkSegment) -> None:
         w.leaf("Association", _attrs(Type="is the location of", ItemID=psgf_id))
     for function_id in _actuating_functions_located_in(segment):
         w.leaf("Association", _attrs(Type="is the location of", ItemID=function_id))
+    # A Connection holds no graphics: each pipe's centre line sits in its segment.
+    for connection in segment.connections:
+        if connection.center_line is not None:
+            _emit_center_line(w, connection.center_line)
     for item in segment.items:
         if isinstance(item, PipeOffPageConnector):
             _emit_off_page_connector(w, item)
@@ -542,6 +596,7 @@ def _emit_segment(w: _Writer, segment: PipingNetworkSegment) -> None:
 
 def _emit_piping_component(w: _Writer, component: PipingComponent) -> None:
     w.open("PipingComponent", _item_attrs(component, component.component_class))
+    _emit_graphics(w, component)
     _emit_connection_points(w, component)
     _emit_generic_attributes(w, component)
     for ref_id in _referenced_by(component):
@@ -553,6 +608,7 @@ def _emit_piping_component(w: _Writer, component: PipingComponent) -> None:
 
 def _emit_off_page_connector(w: _Writer, connector: PipeOffPageConnector) -> None:
     w.open("PipeOffPageConnector", _item_attrs(connector, connector.component_class))
+    _emit_graphics(w, connector)
     _emit_connection_points(w, connector)
     _emit_generic_attributes(w, connector)
     for ref_id in _object_references_to(connector):
@@ -583,8 +639,10 @@ def _emit_connection_points(w: _Writer, owner: Any) -> None:
     w.open("ConnectionPoints", _attrs(**kw))
     w.leaf("Node", _attrs(ID=f"{owner.dex_id}-DefaultNode"))
     for node in nodes:
-        if node.custom_attributes:
+        if node.custom_attributes or node.position is not None:
             w.open("Node", _attrs(Type="process", ID=node.dex_id))
+            if node.position is not None:
+                _emit_position(w, node.position)
             _emit_generic_attributes(w, node)
             w.close("Node")
         else:
@@ -607,6 +665,7 @@ def _emit_connection(w: _Writer, connection: Pipe) -> None:
 
 def _emit_equipment(w: _Writer, equipment: Equipment) -> None:
     w.open("Equipment", _item_attrs(equipment, equipment.component_class))
+    _emit_graphics(w, equipment)
     _emit_generic_attributes(w, equipment)
     for nozzle in equipment.nozzles:
         _emit_nozzle(w, nozzle)
@@ -617,6 +676,7 @@ def _emit_equipment(w: _Writer, equipment: Equipment) -> None:
 
 def _emit_nozzle(w: _Writer, nozzle: Nozzle) -> None:
     w.open("Nozzle", _item_attrs(nozzle, "Nozzle"))
+    _emit_graphics(w, nozzle)
     _emit_connection_points(w, nozzle)
     _emit_generic_attributes(w, nozzle)
     if nozzle.chamber is not None:
@@ -646,6 +706,7 @@ def _emit_instrumentation_loop_function(
 
 def _emit_pif(w: _Writer, pif: ProcessInstrumentationFunction) -> None:
     w.open("ProcessInstrumentationFunction", _item_attrs(pif, pif.component_class))
+    _emit_graphics(w, pif)
     _emit_generic_attributes(w, pif)
     # Child order follows the C01 reference (the XSD allows any order):
     # signal associations, loop associations, InformationFlow, ActuatingFunction, PSGF,
@@ -698,6 +759,8 @@ def _emit_signal(w: _Writer, signal: SignalConveyingFunction) -> None:
         w.leaf("Association", _attrs(Type="has logical start", ItemID=signal.source.dex_id))
     if signal.target is not None:
         w.leaf("Association", _attrs(Type="has logical end", ItemID=signal.target.dex_id))
+    if signal.center_line is not None:  # the only graphics that come last
+        _emit_center_line(w, signal.center_line)
     w.close("InformationFlow")
 
 
@@ -838,5 +901,7 @@ def to_proteus_xml(model: ConceptualModel) -> str:
         _emit_equipment(w, equipment)
     for loop in model.instrumentation_loop_functions:
         _emit_instrumentation_loop_function(w, loop)
+    if model.drawing_extent is not None:
+        _emit_drawing(w, model)
     w.close("PlantModel")
     return w.text()

@@ -50,3 +50,15 @@ Resolved by grilling with the user on 2026-10-27. The contract is the pipeline's
   - It builds `SymbolEntity.quad` from the 5-point ring and `EquipmentEntity.polygon` from the full ring.
   - It maps id suffixes: `_line` -> `piping`, `_dashed` -> `signal-line`, `_actuator` and `a:b` -> attachments without a segment.
   - It sets direction `forward`, because the edge geometry follows source -> target.
+
+## Implementation
+
+Implemented on 2026-10-28 in `src/dexpigen/entities/`, `examples/C01/dex_model/load.py`, `tests/test_entities.py` and `tests/test_c01_dex_sample.py`. The entry point is `check_extraction(graph, entities, size) -> DexExtraction`; it raises `DexExtractionError`. Where the decision was silent:
+
+- **Result:** `DexExtraction` holds an undirected copy of the graph, where each Entity missing from the graph is an isolated `object` node, plus the Entities by id and the size. Its accessors `node_type`, `point`, `segment` (`None` = attachment) and `direction` read the conventions, so the converter does not parse attributes itself. The caller's graph is never modified.
+- **Direction keys:** edge attributes `direction` and `dualflow`. The decision says "edge direction" without naming the key. A `dualflow: true` next to `forward`/`reverse`, or an unknown value, is an error. Direction is read only on line edges.
+- **Graph types:** a `DiGraph` with both `(u, v)` and `(v, u)` counts as parallel edges and is rejected, like a `MultiGraph`.
+- **Skipped checks:** if the graph itself is unusable (it is not NetworkX, or it has parallel edges), its nodes and edges are not checked. The node and edges of an Entity that failed to convert are not checked either. This keeps follow-on problems out of the list.
+- **Extra checks:** a `junction`/`deadend` node with an Entity or without a `Point` is an error, and so is an id shared by a node and an edge (or a symbol Entity that names an edge). After the converter review (2026-10-28), a non-string node id and an Entity of a class other than `SymbolEntity` / `EquipmentEntity` / `SegmentEntity` are errors too.
+- **Broken geometry** means: `quad` is not exactly 4 finite points, a polygon has fewer than 3 distinct finite points, or a line has fewer than 2. Polygon self-intersection is not checked.
+- **Foreign Entities** convert to the class whose name appears in their MRO (`SymbolEntity` / `EquipmentEntity` / `SegmentEntity`). The compatibility test uses a real `model_dump()` of the pipeline's dexlib2-based Entities, captured before `dexlib2` was removed.

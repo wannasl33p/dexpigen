@@ -56,7 +56,7 @@ A nozzle composed under an equipment (DEXPI `Equipment.Nozzle`).
 
 - ComponentClass: `Nozzle`
 - ComponentClassURI: `http://data.posccaesar.org/rdl/RDS415214`
-- Bases: [PipingSourceItem](piping.md#pipingsourceitem), [PipingTargetItem](piping.md#pipingtargetitem), [SensingLocation](piping.md#sensinglocation)
+- Bases: [PipingSourceItem](piping.md#pipingsourceitem), [PipingTargetItem](piping.md#pipingtargetitem), [SensingLocation](piping.md#sensinglocation), [GraphicItem](model.md#graphicitem)
 - Abstract: no
 
 | Field | Type | Default | Relation |
@@ -70,7 +70,7 @@ Abstract root of the equipment tree (DEXPI `Equipment.Equipment`).
 
 - ComponentClass: -
 - ComponentClassURI: -
-- Bases: [DexpiBaseModel](model.md#dexpibasemodel)
+- Bases: [GraphicItem](model.md#graphicitem)
 - Abstract: yes
 
 | Field | Type | Default | Relation |
